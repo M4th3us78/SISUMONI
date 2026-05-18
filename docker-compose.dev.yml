@@ -1,0 +1,23 @@
+services:
+
+  # Apenas o banco — em dev o Spring Boot roda direto pelo IntelliJ
+  db:
+    image: postgres:16-alpine
+    container_name: sisumoni-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sisumoni
+      POSTGRES_USER: sisumoni_user
+      POSTGRES_PASSWORD: sisumoni_pass
+    ports:
+      - "5432:5432"             # acessível em localhost:5432
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sisumoni_user -d sisumoni"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  db_data:
