@@ -1,47 +1,50 @@
 package br.com.sisumoni.backend.service;
 
-
 import br.com.sisumoni.backend.domain.Usuario;
 import br.com.sisumoni.backend.dto.LoginRequest;
 import br.com.sisumoni.backend.dto.LoginResponse;
 import br.com.sisumoni.backend.repository.UsuarioRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
-    
-    private AuthenticationManager authenticationManager;
-    private UsuarioRepository usuarioRepository;
-    private JWTService jwtService;
-    private PasswordEncoder passwordEncoder;
 
-    public LoginResponse login(LoginRequest request){
-        // Autentica via Spring Security — lança exceção se credenciais inválidas
+    private final AuthenticationManager authenticationManager;
+    private final UsuarioRepository usuarioRepository;
+    private final JwtService jwtService;
+
+    // @Lazy resolve a dependência circular com o SecurityConfig
+    public AuthService(
+            @Lazy AuthenticationManager authenticationManager,
+            UsuarioRepository usuarioRepository,
+            JwtService jwtService) {
+        this.authenticationManager = authenticationManager;
+        this.usuarioRepository = usuarioRepository;
+        this.jwtService = jwtService;
+    }
+
+    public LoginResponse login(LoginRequest request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.senha())
+                new UsernamePasswordAuthenticationToken(
+                        request.email(),
+                        request.senha()
+                )
         );
 
-        //Busca o usuário para montar a resposta
         Usuario usuario = usuarioRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado: " + request.email()));
+                .orElseThrow();
 
         String token = jwtService.gerarToken(usuario);
 
         return new LoginResponse(
-            token,
-            usuario.getNome(),
-            usuario.getEmail(),
-            usuario.getPerfil().name()
+                token,
+                usuario.getNome(),
+                usuario.getEmail(),
+                usuario.getPerfil().name()
         );
-    }
-
-    // Usado pelo seed para criar o admin inicial com senha encriptada
-    public String encriptarSenha(String senha){
-        return passwordEncoder.encode(senha);
     }
 }

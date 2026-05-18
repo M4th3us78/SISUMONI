@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class JWTService {
+public class JwtService {
     
     @Value("${app.jwt.secret}")
     private String secret;
@@ -28,8 +28,8 @@ public class JWTService {
 
     public String gerarToken (Usuario usuario){
         Map<String , Object> claims = new HashMap<>();
-        claims.put("Perfil", usuario.getPerfil().name());
-        claims.put("Nome", usuario.getNome());
+        claims.put("perfil", usuario.getPerfil().name());
+        claims.put("nome", usuario.getNome());
 
         return Jwts.builder()
                 .claims(claims)
@@ -42,7 +42,7 @@ public class JWTService {
 
     //Validar token
 
-    public boolean validarToken(String token, UserDetails userDetails){
+    public boolean tokenValido(String token, UserDetails userDetails){
         final String email = extrairEmail(token);
         return (email.equals(userDetails.getUsername()) && !tokenExpirado(token));
     }
