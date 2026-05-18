@@ -1,11 +1,12 @@
-package br.com.sisumoni.service;
+package br.com.sisumoni.backend.service;
  
-import br.com.sisumoni.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
+import br.com.sisumoni.backend.repository.UsuarioRepository;
 
 @Service
 @RequiredArgsConstructor
