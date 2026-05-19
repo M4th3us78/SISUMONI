@@ -71,7 +71,7 @@ CREATE TABLE classificacao (
     vaga_id      UUID         NOT NULL REFERENCES vaga(id)      ON DELETE CASCADE,
     pontuacao    NUMERIC(6,3) NOT NULL,   -- IRA + media_opcao
     posicao      INT,                     -- 1º, 2º, 3º...
-    tipo         VARCHAR(20)  CHECK (tipo IN ('BOLSISTA', 'VOLUNTARIO', 'LISTA_ESPERA')),
+    tipo         VARCHAR(20)  CHECK (tipo IN ('BOLSISTA', 'VOLUNTARIO', 'LISTA_ESPERA','DESCLASSIFICADO')),
     empate       BOOLEAN      NOT NULL DEFAULT FALSE,
     UNIQUE (estudante_id, vaga_id)        -- um estudante, uma posição por vaga
 );
