@@ -9,5 +9,4 @@ import java.util.UUID;
 @Repository
 public interface DepartamentoRepository extends JpaRepository<Departamento, UUID> {
     boolean existsByNome(String nome);
-    //boolean existsByVagasIsNotEmpty(UUID id);
 }
