@@ -4,6 +4,7 @@ import br.com.sisumoni.backend.domain.Departamento;
 import br.com.sisumoni.backend.exception.RecursoNaoEncontradoException;
 import br.com.sisumoni.backend.exception.RegraDeNegocioException;
 import br.com.sisumoni.backend.repository.DepartamentoRepository;
+import br.com.sisumoni.backend.repository.VagaRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,11 +12,13 @@ import java.util.UUID;
 
 @Service
 public class DepartamentoService {
-    
-    private final DepartamentoRepository departamentoRepository;
 
-    public DepartamentoService(DepartamentoRepository departamentoRepository) {
+    private final DepartamentoRepository departamentoRepository;
+    private final VagaRepository vagaRepository;
+
+    public DepartamentoService(DepartamentoRepository departamentoRepository, VagaRepository vagaRepository) {
         this.departamentoRepository = departamentoRepository;
+        this.vagaRepository = vagaRepository;
     }
 
     public List<Departamento> listar() {
@@ -38,7 +41,9 @@ public class DepartamentoService {
 
     public void deletar(UUID id) {
         Departamento departamento = buscarPorId(id);
-        //Adiconar verificação se existe vagas vinculadas
+        if (vagaRepository.existsByDepartamentoId(id)) {
+            throw new RegraDeNegocioException("Não é possível deletar o departamento, pois existem vagas associadas a ele.");
+        }
         departamentoRepository.delete(departamento);
     }
 }
