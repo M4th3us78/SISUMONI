@@ -3,7 +3,7 @@ package br.com.sisumoni.backend.service;
 import br.com.sisumoni.backend.domain.Turma;
 import br.com.sisumoni.backend.exception.RecursoNaoEncontradoException;
 import br.com.sisumoni.backend.exception.RegraDeNegocioException;
-//import br.com.sisumoni.backend.repository.EstudanteRepository;
+import br.com.sisumoni.backend.repository.EstudanteRepository;
 import br.com.sisumoni.backend.repository.TurmaRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +14,11 @@ import java.util.UUID;
 public class TurmaService {
 
     private final TurmaRepository turmaRepository;
+    private final EstudanteRepository estudanteRepository;
 
-    public TurmaService(TurmaRepository turmaRepository) {
+    public TurmaService(TurmaRepository turmaRepository, EstudanteRepository estudanteRepository) {
         this.turmaRepository = turmaRepository;
+        this.estudanteRepository = estudanteRepository;
     }
 
     public List<Turma> listar() {
@@ -38,10 +40,12 @@ public class TurmaService {
     }
 
     public void deletar(UUID id) {
-        Turma turma = buscarPorId(id);
-        //verifica se há estudantes vinculados
-        //
-        turmaRepository.delete(turma);
-        }
+    Turma turma = buscarPorId(id);
+    if (estudanteRepository.existsByTurmaId(id)) {
+        throw new RegraDeNegocioException(
+                "Não é possível deletar uma turma com estudantes vinculados");
+    }
+    turmaRepository.delete(turma);
+}
     
 }
