@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import br.com.sisumoni.backend.dto.ClassificacaoResponse;
+import br.com.sisumoni.backend.service.ClassificacaoService;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,9 +19,12 @@ import java.util.UUID;
 public class VagaController {
 
     private final VagaService vagaService;
+    private final ClassificacaoService classificacaoService;
 
-    public VagaController(VagaService vagaService) {
+    public VagaController(VagaService vagaService,
+                            ClassificacaoService classificacaoService) {
         this.vagaService = vagaService;
+        this.classificacaoService = classificacaoService;
     }
 
     @GetMapping
@@ -44,5 +49,10 @@ public class VagaController {
     public ResponseEntity<Void> deletar(@PathVariable UUID id) {
         vagaService.deletar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/classificacao")
+    public ResponseEntity<List<ClassificacaoResponse>> classificacao(@PathVariable UUID id) {
+        return ResponseEntity.ok(classificacaoService.listarPorVaga(id));
     }
 }
