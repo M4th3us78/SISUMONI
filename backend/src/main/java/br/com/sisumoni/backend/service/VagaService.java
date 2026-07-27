@@ -7,6 +7,7 @@ import br.com.sisumoni.backend.dto.VagaRequest;
 import br.com.sisumoni.backend.exception.RecursoNaoEncontradoException;
 import br.com.sisumoni.backend.exception.RegraDeNegocioException;
 import br.com.sisumoni.backend.repository.DepartamentoRepository;
+import br.com.sisumoni.backend.repository.EstudanteRepository;
 import br.com.sisumoni.backend.repository.TurmaRepository;
 import br.com.sisumoni.backend.repository.VagaRepository;
 import org.springframework.stereotype.Service;
@@ -22,11 +23,13 @@ public class VagaService {
     private final VagaRepository vagaRepository;
     private final DepartamentoRepository departamentoRepository;
     private final TurmaRepository turmaRepository;
+    private final EstudanteRepository estudanteRepository;
 
-    public VagaService(VagaRepository vagaRepository, DepartamentoRepository departamentoRepository, TurmaRepository turmaRepository) {
+    public VagaService(VagaRepository vagaRepository, DepartamentoRepository departamentoRepository, TurmaRepository turmaRepository, EstudanteRepository estudanteRepository) {
         this.vagaRepository = vagaRepository;
         this.departamentoRepository = departamentoRepository;
         this.turmaRepository = turmaRepository;
+        this.estudanteRepository = estudanteRepository;
     }
 
     public List<Vaga> listar() {
@@ -64,9 +67,12 @@ public class VagaService {
     }
 
     public void deletar(UUID id) {
-        Vaga vaga = buscarPorId(id);
-        
-        vagaRepository.delete(vaga);
+    Vaga vaga = buscarPorId(id);
+    if (estudanteRepository.existsByOpcao1IdOrOpcao2Id(id, id)) {
+        throw new RegraDeNegocioException(
+                "Não é possível deletar uma vaga com candidatos inscritos");
     }
+    vagaRepository.delete(vaga);
+}
 
 }
