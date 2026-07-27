@@ -4,6 +4,11 @@ import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.JoinColumn;
+import java.util.HashSet;
+import java.util.Set;
 
 import java.util.Collection;
 import java.util.List;
@@ -37,6 +42,14 @@ public class Usuario implements UserDetails {
         ADMIN, OPERADOR
     }
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "operador_turma",
+            joinColumns = @JoinColumn(name = "usuario_id"),
+            inverseJoinColumns = @JoinColumn(name = "turma_id")
+    )
+    private Set<Turma> turmas = new HashSet<>();
+
     // ── Construtores ──────────────────────────────────────────────
 
     public Usuario() {}
@@ -69,6 +82,9 @@ public class Usuario implements UserDetails {
 
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
+
+    public Set<Turma> getTurmas() { return turmas; }
+    public void setTurmas(Set<Turma> turmas) { this.turmas = turmas; }
 
     // ── Builder estático ──────────────────────────────────────────
 
