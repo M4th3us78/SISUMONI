@@ -26,15 +26,16 @@ public class EstudanteService {
     private final EstudanteRepository estudanteRepository;
     private final TurmaRepository turmaRepository;
     private final VagaRepository vagaRepository;
-    // ClassificacaoService será injetado na issue #18
-    // private final ClassificacaoService classificacaoService;
+    private final ClassificacaoService classificacaoService;
 
     public EstudanteService(EstudanteRepository estudanteRepository,
                             TurmaRepository turmaRepository,
-                            VagaRepository vagaRepository) {
+                            VagaRepository vagaRepository,
+                            ClassificacaoService classificacaoService) {
         this.estudanteRepository = estudanteRepository;
         this.turmaRepository = turmaRepository;
         this.vagaRepository = vagaRepository;
+        this.classificacaoService = classificacaoService;
     }
 
     // ── Listagem filtrada por perfil ──────────────────────────────
@@ -79,8 +80,8 @@ public class EstudanteService {
         Estudante salvo = estudanteRepository.save(estudante);
 
         // Gancho do recálculo — issue #18
-        // classificacaoService.recalcular(salvo.getOpcao1().getId());
-        // if (salvo.getOpcao2() != null) classificacaoService.recalcular(salvo.getOpcao2().getId());
+        classificacaoService.recalcular(salvo.getOpcao1().getId());
+        if (salvo.getOpcao2() != null) classificacaoService.recalcular(salvo.getOpcao2().getId());
 
         return salvo;
     }
@@ -113,8 +114,8 @@ public class EstudanteService {
         Estudante salvo = estudanteRepository.save(estudante);
 
         // Gancho do recálculo — issue #18
-        // classificacaoService.recalcular(salvo.getOpcao1().getId());
-        // if (salvo.getOpcao2() != null) classificacaoService.recalcular(salvo.getOpcao2().getId());
+        classificacaoService.recalcular(salvo.getOpcao1().getId());
+        if (salvo.getOpcao2() != null) classificacaoService.recalcular(salvo.getOpcao2().getId());
 
         return salvo;
     }
@@ -134,8 +135,8 @@ public class EstudanteService {
         estudanteRepository.delete(estudante);
 
         // Gancho do recálculo — issue #18
-        // if (opcao1Id != null) classificacaoService.recalcular(opcao1Id);
-        // if (opcao2Id != null) classificacaoService.recalcular(opcao2Id);
+        if (opcao1Id != null) classificacaoService.recalcular(opcao1Id);
+        if (opcao2Id != null) classificacaoService.recalcular(opcao2Id);
     }
 
     // ── Helpers ───────────────────────────────────────────────────
@@ -185,4 +186,7 @@ public class EstudanteService {
                     "Você não é responsável pela turma deste estudante");
         }
     }
+
+
+    
 }
