@@ -106,8 +106,17 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
     ira: '', opcao1Id: '', mediaOpcao1: '', opcao2Id: '', mediaOpcao2: '',
   })
 
-  const set = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }))
-
+  const set = (campo, valor) => {
+  setForm((f) => {
+    const novo = { ...f, [campo]: valor }
+    // Se trocou a turma, limpa as opções de vaga (podem não ser mais elegíveis)
+    if (campo === 'turmaId') {
+      novo.opcao1Id = ''
+      novo.opcao2Id = ''
+    }
+    return novo
+})
+    }
   // Converte "9,232" (BR) para número 9.232
   const paraNumero = (texto) => {
     if (!texto) return NaN
@@ -118,6 +127,11 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
   const ira = paraNumero(form.ira)
   const media1 = paraNumero(form.mediaOpcao1)
   const pontuacao1 = (!isNaN(ira) && !isNaN(media1)) ? (ira + media1) : null
+
+  // Vagas elegíveis para a turma selecionada
+  const vagasElegiveis = form.turmaId
+  ? vagas.filter((v) => v.turmas?.some((t) => t.id === form.turmaId))
+  : []
 
   const fmt = (n) => n.toFixed(4).replace('.', ',')
 
@@ -222,9 +236,18 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className={label}>1ª opção — vaga</label>
-              <select className={campo} value={form.opcao1Id} onChange={(e) => set('opcao1Id', e.target.value)}>
-                <option value="">Selecione</option>
-                {vagas.map((v) => <option key={v.id} value={v.id}>{v.disciplina}</option>)}
+              <select
+                className={campo}
+                value={form.opcao1Id}
+                onChange={(e) => set('opcao1Id', e.target.value)}
+                disabled={!form.turmaId}
+              >
+                <option value="">
+                  {!form.turmaId ? 'Escolha a turma primeiro' : 'Selecione'}
+                </option>
+                {vagasElegiveis.map((v) => (
+                  <option key={v.id} value={v.id}>{v.disciplina}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -249,9 +272,20 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={label}>Vaga</label>
-              <select className={campo} value={form.opcao2Id} onChange={(e) => set('opcao2Id', e.target.value)}>
-                <option value="">Nenhuma</option>
-                {vagas.map((v) => <option key={v.id} value={v.id}>{v.disciplina}</option>)}
+              <select
+                className={campo}
+                value={form.opcao2Id}
+                onChange={(e) => set('opcao2Id', e.target.value)}
+                disabled={!form.turmaId}
+              >
+                <option value="">
+                  {!form.turmaId ? 'Escolha a turma primeiro' : 'Nenhuma'}
+                </option>
+                {vagasElegiveis
+                  .filter((v) => v.id !== form.opcao1Id)
+                  .map((v) => (
+                    <option key={v.id} value={v.id}>{v.disciplina}</option>
+                  ))}
               </select>
             </div>
             <div>
