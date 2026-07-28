@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import br.com.sisumoni.backend.dto.ClassificacaoResponse;
+import br.com.sisumoni.backend.dto.ResolverEmpateRequest;
 import br.com.sisumoni.backend.service.ClassificacaoService;
 
 import java.util.List;
@@ -53,6 +54,14 @@ public class VagaController {
 
     @GetMapping("/{id}/classificacao")
     public ResponseEntity<List<ClassificacaoResponse>> classificacao(@PathVariable UUID id) {
+        return ResponseEntity.ok(classificacaoService.listarPorVaga(id));
+    }
+
+    @PostMapping("/{id}/resolver-empate")
+    public ResponseEntity<List<ClassificacaoResponse>> resolverEmpate(
+            @PathVariable UUID id,
+            @Valid @RequestBody ResolverEmpateRequest request) {
+        classificacaoService.resolverEmpate(id, request.vencedorId(), request.perdedorId());
         return ResponseEntity.ok(classificacaoService.listarPorVaga(id));
     }
 }
