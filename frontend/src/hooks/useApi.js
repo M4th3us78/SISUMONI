@@ -120,3 +120,14 @@ export function useDeletarOperador() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['operadores'] }),
   })
 }
+
+export function useResolverEmpate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ vagaId, vencedorId, perdedorId }) =>
+      vagasApi.resolverEmpate(vagaId, { vencedorId, perdedorId }),
+    onSuccess: (_, { vagaId }) => {
+      qc.invalidateQueries({ queryKey: ['classificacao', vagaId] })
+    },
+  })
+}

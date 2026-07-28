@@ -20,6 +20,8 @@ export const vagasApi = {
   criar: (dados) => api.post('/vagas', dados).then(r => r.data),
   deletar: (id) => api.delete(`/vagas/${id}`),
   classificacao: (id) => api.get(`/vagas/${id}/classificacao`).then(r => r.data),
+  resolverEmpate: (id, dados) =>
+  api.post(`/vagas/${id}/resolver-empate`, dados).then(r => r.data),
 }
 
 // ── Estudantes ──────────────────────────────────────────
