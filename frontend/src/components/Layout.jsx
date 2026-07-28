@@ -8,32 +8,32 @@ export default function Layout({ children }) {
   const linkClasse = ({ isActive }) =>
     `block px-3 py-2 rounded-lg text-sm transition-colors ${
       isActive
-        ? 'bg-indigo-50 text-indigo-700 font-medium'
-        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        ? 'bg-gold-dim text-gold-light font-medium'
+        : 'text-text2 hover:bg-surface2 hover:text-text1'
     }`
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="h-13 bg-white border-b border-gray-200 flex items-center justify-between px-5 sticky top-0 z-20" style={{ height: 52 }}>
-        <span className="text-[15px] font-semibold">
-          SISU<span className="text-indigo-600">MONI</span>
+    <div className="min-h-screen bg-bg">
+      <header className="h-13 bg-surface border-b border-border flex items-center justify-between px-5 sticky top-0 z-20" style={{ height: 52 }}>
+        <span className="text-[15px] font-display font-bold">
+          SISU<span className="text-gold">MONI</span>
         </span>
-        <div className="flex items-center gap-3 text-sm text-gray-600">
+        <div className="flex items-center gap-3 text-sm text-text2">
           {ehAdmin && (
-            <span className="text-[11px] font-medium bg-gray-900 text-white px-2 py-0.5 rounded-full">
+            <span className="badge badge-gold">
               Administrador
             </span>
           )}
           <span>{usuario?.nome}</span>
-          <button onClick={logout} className="text-gray-500 hover:text-gray-900">
+          <button onClick={logout} className="text-text3 hover:text-text1">
             Sair
           </button>
         </div>
       </header>
 
       <div className="grid" style={{ gridTemplateColumns: '196px 1fr', minHeight: 'calc(100vh - 52px)' }}>
-        <nav className="bg-white border-r border-gray-200 p-3 flex flex-col gap-1">
-          <p className="text-[10px] uppercase tracking-wider text-gray-400 px-3 pt-2 pb-1">
+        <nav className="bg-surface border-r border-border p-3 flex flex-col gap-1">
+          <p className="text-[10px] uppercase tracking-wider text-text3 px-3 pt-2 pb-1">
             Período 2026.1
           </p>
           <NavLink to="/classificacao" className={linkClasse}>Classificação</NavLink>
@@ -41,7 +41,7 @@ export default function Layout({ children }) {
 
           {ehAdmin && (
             <>
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 px-3 pt-3 pb-1">
+              <p className="text-[10px] uppercase tracking-wider text-text3 px-3 pt-3 pb-1">
                 Cadastros
               </p>
               <NavLink to="/vagas" className={linkClasse}>Vagas</NavLink>

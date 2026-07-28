@@ -23,51 +23,51 @@ export default function Estudantes() {
     <div>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-xl font-semibold">Estudantes</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <h1 className="text-xl font-display font-bold text-text1">Estudantes</h1>
+          <p className="text-text2 text-sm mt-0.5">
             {estudantes?.length ?? 0} cadastrados
           </p>
         </div>
         <button
           onClick={() => setModalAberto(true)}
-          className="bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-indigo-700"
+          className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
         >
           Novo estudante
         </button>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="card overflow-hidden">
         {isLoading ? (
-          <p className="text-gray-500 text-sm p-4">Carregando...</p>
+          <p className="text-text2 text-sm p-4">Carregando...</p>
         ) : !estudantes?.length ? (
-          <p className="text-gray-500 text-sm p-4">
+          <p className="text-text2 text-sm p-4">
             Nenhum estudante cadastrado. Clique em "Novo estudante" para começar.
           </p>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left text-[10px] uppercase tracking-wide text-gray-400 font-medium px-4 py-2">Nome</th>
-                <th className="text-left text-[10px] uppercase tracking-wide text-gray-400 font-medium px-4 py-2 w-28">Matrícula</th>
-                <th className="text-left text-[10px] uppercase tracking-wide text-gray-400 font-medium px-4 py-2 w-20">IRA</th>
-                <th className="text-left text-[10px] uppercase tracking-wide text-gray-400 font-medium px-4 py-2 w-16"></th>
+              <tr className="border-b border-border">
+                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Nome</th>
+                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-28">Matrícula</th>
+                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-20">IRA</th>
+                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-16"></th>
               </tr>
             </thead>
             <tbody>
               {estudantes.map((e) => (
-                <tr key={e.id} className="border-b border-gray-100 last:border-0">
+                <tr key={e.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
                   <td className="px-4 py-2.5">
-                    <div className="text-sm font-medium">{e.nome}</div>
-                    <div className="text-xs text-gray-400">{e.nomeFantasia}</div>
+                    <div className="text-sm font-medium text-text1">{e.nome}</div>
+                    <div className="text-xs text-text3">{e.nomeFantasia}</div>
                   </td>
-                  <td className="px-4 py-2.5 text-sm text-gray-600 tabular-nums">{e.matricula}</td>
-                  <td className="px-4 py-2.5 text-sm tabular-nums">{fmt(e.ira)}</td>
+                  <td className="px-4 py-2.5 text-sm text-text2 tabular-nums font-mono">{e.matricula}</td>
+                  <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono">{fmt(e.ira)}</td>
                   <td className="px-4 py-2.5 text-right">
                     <button
                       onClick={() => {
                         if (confirm(`Remover ${e.nome}?`)) deletar.mutate(e.id)
                       }}
-                      className="text-xs text-rose-600 hover:text-rose-800"
+                      className="text-xs text-danger hover:text-danger/80"
                     >
                       Remover
                     </button>
@@ -186,58 +186,55 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
   onSalvar(dados)
 }
 
-  const campo = "border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
-  const label = "text-xs font-medium text-gray-600 mb-1 block"
-
   return (
-    <div className="fixed inset-0 bg-black/40 grid place-items-center p-6 z-50" onClick={onFechar}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center p-6 z-50" onClick={onFechar}>
       <div
-        className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="card w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-gray-200">
-          <h2 className="text-sm font-semibold">Cadastrar estudante</h2>
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold text-text1">Cadastrar estudante</h2>
         </div>
 
         <div className="p-5">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium mb-2">Identificação</p>
+          <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2">Identificação</p>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className={label}>Nome completo</label>
-              <input className={campo} value={form.nome} onChange={(e) => set('nome', e.target.value)} />
+              <label className="field-label">Nome completo</label>
+              <input className="field" value={form.nome} onChange={(e) => set('nome', e.target.value)} />
             </div>
             <div>
-              <label className={label}>Nome fantasia</label>
-              <input className={campo} value={form.nomeFantasia} onChange={(e) => set('nomeFantasia', e.target.value)} />
+              <label className="field-label">Nome fantasia</label>
+              <input className="field" value={form.nomeFantasia} onChange={(e) => set('nomeFantasia', e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className={label}>Matrícula</label>
-              <input className={campo} value={form.matricula} onChange={(e) => set('matricula', e.target.value)} />
+              <label className="field-label">Matrícula</label>
+              <input className="field" value={form.matricula} onChange={(e) => set('matricula', e.target.value)} />
             </div>
             <div>
-              <label className={label}>Turma</label>
-              <select className={campo} value={form.turmaId} onChange={(e) => set('turmaId', e.target.value)}>
+              <label className="field-label">Turma</label>
+              <select className="field" value={form.turmaId} onChange={(e) => set('turmaId', e.target.value)}>
                 <option value="">Selecione</option>
                 {turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
               </select>
             </div>
           </div>
 
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium mb-2 mt-4">Notas</p>
+          <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2 mt-4">Notas</p>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className={label}>IRA (0 a 10)</label>
-              <input type="text" inputMode="decimal" placeholder="9,232" className={campo} value={form.ira} onChange={(e) => set('ira', e.target.value)} />
+              <label className="field-label">IRA (0 a 10)</label>
+              <input type="text" inputMode="decimal" placeholder="9,232" className="field" value={form.ira} onChange={(e) => set('ira', e.target.value)} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className={label}>1ª opção — vaga</label>
+              <label className="field-label">1ª opção — vaga</label>
               <select
-                className={campo}
+                className="field"
                 value={form.opcao1Id}
                 onChange={(e) => set('opcao1Id', e.target.value)}
                 disabled={!form.turmaId}
@@ -251,29 +248,29 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
               </select>
             </div>
             <div>
-              <label className={label}>Média na 1ª opção</label>
-              <input type="text" inputMode="decimal" placeholder="9,5" className={campo} value={form.mediaOpcao1} onChange={(e) => set('mediaOpcao1', e.target.value)} />
+              <label className="field-label">Média na 1ª opção</label>
+              <input type="text" inputMode="decimal" placeholder="9,5" className="field" value={form.mediaOpcao1} onChange={(e) => set('mediaOpcao1', e.target.value)} />
             </div>
           </div>
 
           {/* Cálculo ao vivo */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 flex items-center justify-between mt-4">
-            <div className="text-xs text-gray-500">
+          <div className="bg-surface2 border border-border2 rounded-lg px-4 py-3 flex items-center justify-between mt-4">
+            <div className="text-xs text-text2">
               {pontuacao1 != null
-                ? <>Pontuação = <span className="tabular-nums">{fmt(ira)}</span> + <span className="tabular-nums">{fmt(media1)}</span></>
+                ? <>Pontuação = <span className="tabular-nums font-mono">{fmt(ira)}</span> + <span className="tabular-nums font-mono">{fmt(media1)}</span></>
                 : 'Preencha IRA e média para ver a pontuação'}
             </div>
-            <div className={`text-2xl font-medium tabular-nums ${pontuacao1 != null ? 'text-gray-900' : 'text-gray-300'}`}>
+            <div className={`text-2xl font-display font-bold tabular-nums ${pontuacao1 != null ? 'text-gold-light' : 'text-text3'}`}>
               {pontuacao1 != null ? fmt(pontuacao1) : '—'}
             </div>
           </div>
 
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium mb-2 mt-4">2ª opção (opcional)</p>
+          <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2 mt-4">2ª opção (opcional)</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={label}>Vaga</label>
+              <label className="field-label">Vaga</label>
               <select
-                className={campo}
+                className="field"
                 value={form.opcao2Id}
                 onChange={(e) => set('opcao2Id', e.target.value)}
                 disabled={!form.turmaId}
@@ -289,20 +286,20 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
               </select>
             </div>
             <div>
-              <label className={label}>Média na 2ª opção</label>
-              <input type="text" inputMode="decimal" placeholder="8,0" className={campo} value={form.mediaOpcao2} onChange={(e) => set('mediaOpcao2', e.target.value)} />
+              <label className="field-label">Média na 2ª opção</label>
+              <input type="text" inputMode="decimal" placeholder="8,0" className="field" value={form.mediaOpcao2} onChange={(e) => set('mediaOpcao2', e.target.value)} />
             </div>
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
-          <button onClick={onFechar} className="border border-gray-300 rounded-lg px-4 py-2 text-sm hover:bg-gray-50">
+        <div className="px-5 py-4 border-t border-border flex justify-end gap-2">
+          <button onClick={onFechar} className="border border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
             Cancelar
           </button>
           <button
             onClick={submeter}
             disabled={salvando}
-            className="bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light disabled:opacity-50 transition-colors"
           >
             {salvando ? 'Salvando...' : 'Salvar estudante'}
           </button>

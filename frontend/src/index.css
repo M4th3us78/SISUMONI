@@ -1,122 +1,71 @@
 @import "tailwindcss";
 
-.tag {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
+@theme {
+  --color-bg: #0C1220;
+  --color-surface: #111827;
+  --color-surface2: #162032;
+  --color-surface3: #1C2B40;
+  --color-border: #1E3048;
+  --color-border2: #243650;
 
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --color-gold: #C9A84C;
+  --color-gold-dim: #2A2010;
+  --color-gold-light: #E8C87A;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --color-accent: #2563EB;
+  --color-accent-light: #60A5FA;
+  --color-accent-dim: #0F2040;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --color-success: #10B981;
+  --color-success-dim: #052E1A;
+  --color-warning: #F59E0B;
+  --color-warning-dim: #2D1B00;
+  --color-danger: #EF4444;
+  --color-danger-dim: #2A0A0A;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
+  --color-text1: #F0F4FF;
+  --color-text2: #8BA3C0;
+  --color-text3: #4A6080;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Instrument Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  --radius-card: 10px;
+  --radius-card-lg: 16px;
 }
 
 body {
   margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text1);
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+@layer components {
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium
+           font-mono tracking-wide border whitespace-nowrap;
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+  .badge-gold    { @apply bg-gold-dim    text-gold-light   border-gold/30; }
+  .badge-accent  { @apply bg-accent-dim  text-accent-light border-accent/30; }
+  .badge-green   { @apply bg-success-dim text-success       border-success/30; }
+  .badge-yellow  { @apply bg-warning-dim text-warning       border-warning/30; }
+  .badge-red     { @apply bg-danger-dim  text-danger        border-danger/30; }
+  .badge-neutral { @apply bg-surface3    text-text2         border-border2; }
+
+  .rank-pos { @apply inline-grid place-items-center w-6 h-6 rounded-md font-mono font-bold text-xs; }
+  .rank-1 { @apply bg-gold-dim   text-gold-light; }
+  .rank-2 { @apply bg-accent-dim text-accent-light; }
+  .rank-n { @apply bg-surface3   text-text3; }
+
+  .card { @apply bg-surface border border-border rounded-2xl; }
+
+  .field {
+    @apply bg-surface2 border border-border2 rounded-lg px-3 py-2 text-sm
+           text-text1 placeholder:text-text3 w-full
+           focus:outline-none focus:border-accent-light transition-colors;
   }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  .field-label {
+    @apply text-[11px] font-mono uppercase tracking-wider text-text2 mb-1 block;
+  }
 }

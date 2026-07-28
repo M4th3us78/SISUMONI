@@ -79,9 +79,9 @@ public class EstudanteService {
         preencher(estudante, request, turma);
         Estudante salvo = estudanteRepository.save(estudante);
 
-        // Gancho do recálculo — issue #18
-        classificacaoService.recalcular(salvo.getOpcao1().getId());
-        if (salvo.getOpcao2() != null) classificacaoService.recalcular(salvo.getOpcao2().getId());
+        // A classificação agora considera todas as vagas juntas (regra de
+        // exclusividade: o estudante só pode estar em uma vaga no sistema)
+        classificacaoService.recalcularTudo();
 
         return salvo;
     }
@@ -113,9 +113,9 @@ public class EstudanteService {
         preencher(estudante, request, novaTurma);
         Estudante salvo = estudanteRepository.save(estudante);
 
-        // Gancho do recálculo — issue #18
-        classificacaoService.recalcular(salvo.getOpcao1().getId());
-        if (salvo.getOpcao2() != null) classificacaoService.recalcular(salvo.getOpcao2().getId());
+        // A classificação agora considera todas as vagas juntas (regra de
+        // exclusividade: o estudante só pode estar em uma vaga no sistema)
+        classificacaoService.recalcularTudo();
 
         return salvo;
     }
@@ -129,14 +129,9 @@ public class EstudanteService {
 
         verificarAcessoATurma(estudante.getTurma());
 
-        UUID opcao1Id = estudante.getOpcao1() != null ? estudante.getOpcao1().getId() : null;
-        UUID opcao2Id = estudante.getOpcao2() != null ? estudante.getOpcao2().getId() : null;
-
         estudanteRepository.delete(estudante);
 
-        // Gancho do recálculo — issue #18
-        if (opcao1Id != null) classificacaoService.recalcular(opcao1Id);
-        if (opcao2Id != null) classificacaoService.recalcular(opcao2Id);
+        classificacaoService.recalcularTudo();
     }
 
     // ── Helpers ───────────────────────────────────────────────────
@@ -166,19 +161,14 @@ public class EstudanteService {
         estudante.setOpcao1(opcao1);
         estudante.setMediaOpcao1(BigDecimal.valueOf(request.mediaOpcao1()));
 
-        if (request.opcao2Id() != null) {
-            Vaga opcao2 = vagaRepository.findByIdComRelacionamentos(request.opcao2Id())
-                    .orElseThrow(() -> new RecursoNaoEncontradoException(
-                            "Vaga da 2ª opção não encontrada"));
+        Vaga opcao2 = vagaRepository.findByIdComRelacionamentos(request.opcao2Id())
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Vaga da 2ª opção não encontrada"));
 
-            verificarTurmaElegivel(opcao2, turma, "2ª opção");
+        verificarTurmaElegivel(opcao2, turma, "2ª opção");
 
-            estudante.setOpcao2(opcao2);
-            estudante.setMediaOpcao2(BigDecimal.valueOf(request.mediaOpcao2()));
-        } else {
-            estudante.setOpcao2(null);
-            estudante.setMediaOpcao2(null);
-        }
+        estudante.setOpcao2(opcao2);
+        estudante.setMediaOpcao2(BigDecimal.valueOf(request.mediaOpcao2()));
     }
 
     private Usuario usuarioLogado() {

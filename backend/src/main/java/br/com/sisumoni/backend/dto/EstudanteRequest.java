@@ -30,8 +30,10 @@ public record EstudanteRequest(
         @DecimalMin(value = "0.0") @DecimalMax(value = "10.0")
         Double mediaOpcao1,
 
+        @NotNull(message = "2ª opção é obrigatória")
         UUID opcao2Id,
 
+        @NotNull(message = "Média da 2ª opção é obrigatória")
         @DecimalMin(value = "0.0") @DecimalMax(value = "10.0")
         Double mediaOpcao2
 ) {}

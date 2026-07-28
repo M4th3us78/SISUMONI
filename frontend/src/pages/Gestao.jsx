@@ -10,19 +10,19 @@ export default function Gestao() {
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-xl font-semibold">Turmas e departamentos</h1>
-        <p className="text-gray-500 text-sm mt-0.5">
+        <h1 className="text-xl font-display font-bold text-text1">Turmas e departamentos</h1>
+        <p className="text-text2 text-sm mt-0.5">
           Cadastros base do sistema
         </p>
       </div>
 
-      <div className="flex gap-1 mb-4 border-b border-gray-200">
+      <div className="flex gap-1 mb-4 border-b border-border">
         <button
           onClick={() => setAba('turmas')}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             aba === 'turmas'
-              ? 'border-indigo-600 text-indigo-700'
-              : 'border-transparent text-gray-500 hover:text-gray-800'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-text2 hover:text-text1'
           }`}
         >
           Turmas
@@ -31,8 +31,8 @@ export default function Gestao() {
           onClick={() => setAba('departamentos')}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             aba === 'departamentos'
-              ? 'border-indigo-600 text-indigo-700'
-              : 'border-transparent text-gray-500 hover:text-gray-800'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-text2 hover:text-text1'
           }`}
         >
           Departamentos
@@ -126,30 +126,30 @@ function CrudSimples({ itens, isLoading, nome, setNome, onAdicionar, salvando, o
           onChange={(e) => setNome(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && onAdicionar()}
           placeholder={placeholder}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="field flex-1"
         />
         <button
           onClick={onAdicionar}
           disabled={salvando}
-          className="bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+          className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light disabled:opacity-50 transition-colors"
         >
           Adicionar
         </button>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="card overflow-hidden">
         {isLoading ? (
-          <p className="text-gray-500 text-sm p-4">Carregando...</p>
+          <p className="text-text2 text-sm p-4">Carregando...</p>
         ) : !itens?.length ? (
-          <p className="text-gray-500 text-sm p-4">{vazio}</p>
+          <p className="text-text2 text-sm p-4">{vazio}</p>
         ) : (
           <ul>
             {itens.map((item) => (
-              <li key={item.id} className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-0">
-                <span className="text-sm">{item.nome}</span>
+              <li key={item.id} className="flex items-center justify-between px-4 py-3 border-b border-border2 last:border-0 hover:bg-surface2">
+                <span className="text-sm text-text1">{item.nome}</span>
                 <button
                   onClick={() => onDeletar(item.id, item.nome)}
-                  className="text-xs text-rose-600 hover:text-rose-800"
+                  className="text-xs text-danger hover:text-danger/80"
                 >
                   Remover
                 </button>

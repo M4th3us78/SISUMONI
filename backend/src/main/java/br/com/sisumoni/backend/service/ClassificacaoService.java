@@ -20,8 +20,10 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -43,54 +45,151 @@ public class ClassificacaoService {
         this.resolucaoRepository = resolucaoRepository;
     }
 
+    // Qual "balde" de capacidade de uma vaga um tier está preenchendo
+    private enum TipoSlot { PASSANDO, ESPERA }
+
     // ══════════════════════════════════════════════════════════════
-    //  RECÁLCULO
+    //  RECÁLCULO GLOBAL
     // ══════════════════════════════════════════════════════════════
+    /**
+     * Recalcula a classificação de TODAS as vagas de uma vez.
+     *
+     * Regra de exclusividade: um estudante só pode estar classificado em
+     * UMA vaga no sistema inteiro, decidida por esta escada de prioridade:
+     *   1) Bolsista/Voluntário na 1ª opção
+     *   2) Bolsista/Voluntário na 2ª opção
+     *   3) Lista de Espera na 1ª opção
+     *   4) Lista de Espera na 2ª opção
+     * Assim que o estudante se classifica em qualquer nível, ele sai da
+     * disputa em tudo mais (inclusive não ocupa lista de espera de duas
+     * vagas ao mesmo tempo). Por isso o cálculo não pode mais ser feito
+     * vaga por vaga isoladamente — o resultado de uma vaga pode liberar ou
+     * ocupar vagas de outra.
+     */
     @Transactional
-    public void recalcular(UUID vagaId) {
-        Vaga vaga = vagaRepository.findById(vagaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException(
-                        "Vaga não encontrada com id: " + vagaId));
+    public void recalcularTudo() {
+        List<Vaga> vagas = vagaRepository.findAll();
+        List<Estudante> estudantes = estudanteRepository.findAllComRelacionamentos();
 
-        // 1. Buscar candidatos (1ª ou 2ª opção apontando para esta vaga)
-        List<Candidato> candidatos = buscarCandidatos(vagaId);
+        Map<UUID, List<ResolucaoEmpate>> resolucoesPorVaga = resolucaoRepository.findAllComEstudantes().stream()
+                .collect(Collectors.groupingBy(r -> r.getVaga().getId()));
 
-        // 2. Carregar resoluções de empate existentes desta vaga
-        List<ResolucaoEmpate> resolucoes = resolucaoRepository.findByVagaIdComEstudantes(vagaId);
-
-        // 3. Ordenar: 1º por pontuação (desc); 2º pelo desempate decidido pelo operador
-        candidatos.sort(construirComparador(resolucoes));
-
-        // 4. Atribuir posição e tipo
-        int totalBolsista = vaga.getQtdBolsistas();
-        int totalVoluntario = vaga.getQtdVoluntarios();
-        int totalEspera = vaga.getQtdListaEspera();
-
-        for (int i = 0; i < candidatos.size(); i++) {
-            Candidato c = candidatos.get(i);
-            int posicao = i + 1;
-            c.posicao = posicao;
-            if (posicao <= totalBolsista) {
-                c.tipo = Classificacao.Tipo.BOLSISTA;
-            } else if (posicao <= totalBolsista + totalVoluntario) {
-                c.tipo = Classificacao.Tipo.VOLUNTARIO;
-            } else if (posicao <= totalBolsista + totalVoluntario + totalEspera) {
-                c.tipo = Classificacao.Tipo.LISTA_ESPERA;
-            } else {
-                c.tipo = null;
+        List<Candidatura> candidaturas1 = new ArrayList<>();
+        List<Candidatura> candidaturas2 = new ArrayList<>();
+        for (Estudante e : estudantes) {
+            if (e.getOpcao1() != null && e.getMediaOpcao1() != null) {
+                candidaturas1.add(new Candidatura(e, e.getOpcao1(), e.getIra().add(e.getMediaOpcao1())));
+            }
+            if (e.getOpcao2() != null && e.getMediaOpcao2() != null) {
+                candidaturas2.add(new Candidatura(e, e.getOpcao2(), e.getIra().add(e.getMediaOpcao2())));
             }
         }
 
-        // 5. Faxina: descartar resoluções que não fazem mais sentido (regra de reabertura)
-        limparResolucoesObsoletas(candidatos, resolucoes,
-                totalBolsista, totalVoluntario, totalEspera);
+        Set<UUID> consumidos = new HashSet<>();
+        Map<UUID, List<Candidato>> resultados = new HashMap<>();
+        for (Vaga v : vagas) resultados.put(v.getId(), new ArrayList<>());
 
-        // 6. Detectar empate de dois na fronteira — ignorando pares já resolvidos
-        detectarEmpateNaFronteira(candidatos, resolucoes,
-                totalBolsista, totalVoluntario, totalEspera);
+        // 1º) Bolsista/Voluntário na 1ª opção
+        processarTier(candidaturas1, TipoSlot.PASSANDO, consumidos, resultados, resolucoesPorVaga);
+        // 2º) Bolsista/Voluntário na 2ª opção (só quem sobrou do nível 1)
+        processarTier(candidaturas2, TipoSlot.PASSANDO, consumidos, resultados, resolucoesPorVaga);
+        // 3º) Lista de espera na 1ª opção (só quem sobrou dos níveis 1-2)
+        processarTier(candidaturas1, TipoSlot.ESPERA, consumidos, resultados, resolucoesPorVaga);
+        // 4º) Lista de espera na 2ª opção (só quem sobrou dos níveis 1-3)
+        processarTier(candidaturas2, TipoSlot.ESPERA, consumidos, resultados, resolucoesPorVaga);
 
-        // 7. Persistir (atualizar o que mudou)
-        sincronizar(vaga, candidatos);
+        limparResolucoesObsoletas(resultados, resolucoesPorVaga);
+
+        for (Vaga v : vagas) {
+            sincronizar(v, resultados.get(v.getId()));
+        }
+    }
+
+    /**
+     * Processa um nível da escada de prioridade: para cada vaga, ordena os
+     * candidatos deste tier que ainda não foram consumidos por um nível
+     * anterior e preenche a capacidade que ainda sobrar dessa vaga neste
+     * "balde" (PASSANDO ou ESPERA).
+     */
+    private void processarTier(List<Candidatura> candidaturas, TipoSlot tipoSlot,
+                                Set<UUID> consumidos,
+                                Map<UUID, List<Candidato>> resultados,
+                                Map<UUID, List<ResolucaoEmpate>> resolucoesPorVaga) {
+
+        Map<UUID, List<Candidatura>> porVaga = candidaturas.stream()
+                .filter(c -> !consumidos.contains(c.estudante.getId()))
+                .collect(Collectors.groupingBy(c -> c.vaga.getId()));
+
+        for (Map.Entry<UUID, List<Candidatura>> entry : porVaga.entrySet()) {
+            UUID vagaId = entry.getKey();
+            Vaga vaga = entry.getValue().get(0).vaga;
+            List<ResolucaoEmpate> resolucoes = resolucoesPorVaga.getOrDefault(vagaId, List.of());
+            List<Candidato> jaAlocados = resultados.get(vagaId);
+            Map<String, Boolean> resolvidos = mapaResolvidos(resolucoes);
+
+            List<Candidato> ordenados = entry.getValue().stream()
+                    .map(c -> new Candidato(c.estudante, c.pontuacao))
+                    .sorted(construirComparador(resolucoes))
+                    .collect(Collectors.toList());
+
+            int capacidadeTotal = (tipoSlot == TipoSlot.PASSANDO)
+                    ? vaga.getQtdBolsistas() + vaga.getQtdVoluntarios()
+                    : vaga.getQtdListaEspera();
+            long jaOcupados = jaAlocados.stream().filter(c -> c.tipoSlot == tipoSlot).count();
+            int capacidade = (int) (capacidadeTotal - jaOcupados);
+            if (capacidade <= 0) continue;
+
+            int limite = Math.min(capacidade, ordenados.size());
+
+            // Empate na fronteira externa (entra neste tier vs. fica de fora): se
+            // empatado e ainda sem resolução, os dois entram provisoriamente —
+            // o operador decide depois, e a decisão dispara um novo recálculo.
+            boolean empateNaFronteira = limite < ordenados.size()
+                    && ordenados.get(limite - 1).pontuacao.compareTo(ordenados.get(limite).pontuacao) == 0
+                    && !resolvidos.containsKey(chavePar(
+                            ordenados.get(limite - 1).estudante.getId(),
+                            ordenados.get(limite).estudante.getId()));
+            if (empateNaFronteira) {
+                ordenados.get(limite - 1).empate = true;
+                ordenados.get(limite).empate = true;
+            }
+            int limiteEfetivo = empateNaFronteira ? limite + 1 : limite;
+
+            long bolsistasJaAlocados = jaAlocados.stream()
+                    .filter(c -> c.tipo == Classificacao.Tipo.BOLSISTA).count();
+            int offsetPosicao = jaAlocados.size();
+            int qtdBolsistasVaga = vaga.getQtdBolsistas();
+
+            for (int i = 0; i < limiteEfetivo; i++) {
+                Candidato c = ordenados.get(i);
+                c.tipoSlot = tipoSlot;
+                c.posicao = offsetPosicao + i + 1;
+                if (tipoSlot == TipoSlot.ESPERA) {
+                    c.tipo = Classificacao.Tipo.LISTA_ESPERA;
+                } else {
+                    long indiceGlobalPassando = bolsistasJaAlocados + i;
+                    c.tipo = (indiceGlobalPassando < qtdBolsistasVaga)
+                            ? Classificacao.Tipo.BOLSISTA
+                            : Classificacao.Tipo.VOLUNTARIO;
+                }
+                jaAlocados.add(c);
+                consumidos.add(c.estudante.getId());
+            }
+
+            // Empate interno bolsista/voluntário (só faz sentido dentro de PASSANDO)
+            if (tipoSlot == TipoSlot.PASSANDO) {
+                int fronteiraBolsista = (int) (qtdBolsistasVaga - bolsistasJaAlocados);
+                if (fronteiraBolsista > 0 && fronteiraBolsista < limiteEfetivo) {
+                    Candidato dentro = ordenados.get(fronteiraBolsista - 1);
+                    Candidato fora = ordenados.get(fronteiraBolsista);
+                    if (dentro.pontuacao.compareTo(fora.pontuacao) == 0
+                            && !resolvidos.containsKey(chavePar(dentro.estudante.getId(), fora.estudante.getId()))) {
+                        dentro.empate = true;
+                        fora.empate = true;
+                    }
+                }
+            }
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -140,8 +239,9 @@ public class ClassificacaoService {
         resolucao.setResolvidoPor(usuarioLogado());
         resolucaoRepository.save(resolucao);
 
-        // Recalcular já aplicando a decisão
-        recalcular(vagaId);
+        // Recalcular tudo já aplicando a decisão (a decisão pode liberar ou
+        // ocupar vagas em cascata, não só a vaga onde o empate ocorreu)
+        recalcularTudo();
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -169,20 +269,6 @@ public class ClassificacaoService {
     //  HELPERS
     // ══════════════════════════════════════════════════════════════
 
-    private List<Candidato> buscarCandidatos(UUID vagaId) {
-        List<Candidato> candidatos = new ArrayList<>();
-        for (Estudante e : estudanteRepository.findAll()) {
-            if (e.getOpcao1() != null && e.getOpcao1().getId().equals(vagaId)
-                    && e.getMediaOpcao1() != null) {
-                candidatos.add(new Candidato(e, e.getIra().add(e.getMediaOpcao1())));
-            } else if (e.getOpcao2() != null && e.getOpcao2().getId().equals(vagaId)
-                    && e.getMediaOpcao2() != null) {
-                candidatos.add(new Candidato(e, e.getIra().add(e.getMediaOpcao2())));
-            }
-        }
-        return candidatos;
-    }
-
     private BigDecimal pontuacaoNaVaga(Estudante e, UUID vagaId) {
         if (e.getOpcao1() != null && e.getOpcao1().getId().equals(vagaId) && e.getMediaOpcao1() != null) {
             return e.getIra().add(e.getMediaOpcao1());
@@ -198,8 +284,6 @@ public class ClassificacaoService {
      * respeita a decisão do operador (vencedor vem antes do perdedor).
      */
     private Comparator<Candidato> construirComparador(List<ResolucaoEmpate> resolucoes) {
-        // Mapa: para um par empatado, quem é o vencedor
-        // chave "menorId|maiorId" -> id do vencedor
         Map<String, UUID> vencedores = new HashMap<>();
         for (ResolucaoEmpate r : resolucoes) {
             vencedores.put(chavePar(r.getVencedor().getId(), r.getPerdedor().getId()),
@@ -210,90 +294,50 @@ public class ClassificacaoService {
             int porPontuacao = b.pontuacao.compareTo(a.pontuacao); // desc
             if (porPontuacao != 0) return porPontuacao;
 
-            // Empate real: existe decisão para este par?
             UUID vencedor = vencedores.get(chavePar(a.estudante.getId(), b.estudante.getId()));
             if (vencedor != null) {
-                if (vencedor.equals(a.estudante.getId())) return -1; // a vem antes
-                if (vencedor.equals(b.estudante.getId())) return 1;  // b vem antes
+                if (vencedor.equals(a.estudante.getId())) return -1;
+                if (vencedor.equals(b.estudante.getId())) return 1;
             }
-            // Sem decisão: mantém estável por id (determinístico)
             return a.estudante.getId().compareTo(b.estudante.getId());
         };
     }
 
-    /**
-     * Regra de reabertura: descarta resoluções cujo par não empata mais
-     * ou não disputa mais uma fronteira.
-     */
-    private void limparResolucoesObsoletas(List<Candidato> candidatos,
-                                           List<ResolucaoEmpate> resolucoes,
-                                           int tb, int tv, int te) {
-        Map<UUID, Candidato> porEstudante = new HashMap<>();
-        for (Candidato c : candidatos) porEstudante.put(c.estudante.getId(), c);
-
-        int[] fronteiras = { tb, tb + tv, tb + tv + te };
-
-        List<ResolucaoEmpate> obsoletas = new ArrayList<>();
-        for (ResolucaoEmpate r : resolucoes) {
-            Candidato v = porEstudante.get(r.getVencedor().getId());
-            Candidato p = porEstudante.get(r.getPerdedor().getId());
-
-            // Um dos dois saiu da vaga
-            if (v == null || p == null) { obsoletas.add(r); continue; }
-
-            // Não empatam mais em pontuação
-            if (v.pontuacao.compareTo(p.pontuacao) != 0) { obsoletas.add(r); continue; }
-
-            // O par não está mais atravessando nenhuma fronteira
-            boolean naFronteira = false;
-            for (int f : fronteiras) {
-                if (f <= 0 || f >= candidatos.size()) continue;
-                Candidato dentro = candidatos.get(f - 1);
-                Candidato fora = candidatos.get(f);
-                boolean envolveOPar =
-                        (ehDoPar(dentro, r) && ehDoPar(fora, r));
-                if (envolveOPar) { naFronteira = true; break; }
-            }
-            if (!naFronteira) obsoletas.add(r);
-        }
-
-        for (ResolucaoEmpate r : obsoletas) {
-            resolucoes.remove(r);
-            resolucaoRepository.delete(r);
-        }
-    }
-
-    private boolean ehDoPar(Candidato c, ResolucaoEmpate r) {
-        UUID id = c.estudante.getId();
-        return id.equals(r.getVencedor().getId()) || id.equals(r.getPerdedor().getId());
-    }
-
-    private void detectarEmpateNaFronteira(List<Candidato> candidatos,
-                                           List<ResolucaoEmpate> resolucoes,
-                                           int tb, int tv, int te) {
-        // Pares já resolvidos não geram alerta
+    private Map<String, Boolean> mapaResolvidos(List<ResolucaoEmpate> resolucoes) {
         Map<String, Boolean> resolvidos = new HashMap<>();
         for (ResolucaoEmpate r : resolucoes) {
             resolvidos.put(chavePar(r.getVencedor().getId(), r.getPerdedor().getId()), true);
         }
+        return resolvidos;
+    }
 
-        int[] fronteiras = { tb, tb + tv, tb + tv + te };
-        for (int fronteira : fronteiras) {
-            if (fronteira <= 0 || fronteira >= candidatos.size()) continue;
+    /**
+     * Regra de reabertura: descarta resoluções cujo par não está mais
+     * empatado e adjacente no resultado final de nenhuma vaga (limitação
+     * conhecida: se o mesmo par voltar a empatar num nível diferente da
+     * mesma vaga — ex.: empataram no corte de bolsista/voluntário, e mais
+     * tarde voltam a empatar no corte da lista de espera — a resolução
+     * antiga pode se aplicar de novo automaticamente em vez de gerar um
+     * novo alerta; a ordem decidida entre os dois continua fazendo
+     * sentido, só o operador não é perguntado de novo nesse caso raro).
+     */
+    private void limparResolucoesObsoletas(Map<UUID, List<Candidato>> resultados,
+                                           Map<UUID, List<ResolucaoEmpate>> resolucoesPorVaga) {
+        for (Map.Entry<UUID, List<ResolucaoEmpate>> entry : resolucoesPorVaga.entrySet()) {
+            List<Candidato> finalDaVaga = resultados.getOrDefault(entry.getKey(), List.of());
+            Map<UUID, Candidato> porEstudante = new HashMap<>();
+            for (Candidato c : finalDaVaga) porEstudante.put(c.estudante.getId(), c);
 
-            Candidato dentro = candidatos.get(fronteira - 1);
-            Candidato fora = candidatos.get(fronteira);
-
-            if (dentro.pontuacao.compareTo(fora.pontuacao) == 0) {
-                // Se este par já foi resolvido, não marca empate
-                boolean jaResolvido = resolvidos.containsKey(
-                        chavePar(dentro.estudante.getId(), fora.estudante.getId()));
-                if (!jaResolvido) {
-                    dentro.empate = true;
-                    fora.empate = true;
+            for (ResolucaoEmpate r : entry.getValue()) {
+                Candidato v = porEstudante.get(r.getVencedor().getId());
+                Candidato p = porEstudante.get(r.getPerdedor().getId());
+                boolean aindaValida = v != null && p != null
+                        && v.pontuacao.compareTo(p.pontuacao) == 0
+                        && Math.abs(v.posicao - p.posicao) == 1;
+                if (!aindaValida) {
+                    resolucaoRepository.delete(r);
                 }
             }
-            // TODO: empate múltiplo (3+ na mesma fronteira) — pós-MVP
         }
     }
 
@@ -338,10 +382,27 @@ public class ClassificacaoService {
         return (a.compareTo(b) < 0) ? a + "|" + b : b + "|" + a;
     }
 
+    // Candidatura bruta de um estudante a uma vaga (via 1ª ou 2ª opção),
+    // antes de saber se ele vai ser consumido por algum tier
+    private static class Candidatura {
+        Estudante estudante;
+        Vaga vaga;
+        BigDecimal pontuacao;
+
+        Candidatura(Estudante estudante, Vaga vaga, BigDecimal pontuacao) {
+            this.estudante = estudante;
+            this.vaga = vaga;
+            this.pontuacao = pontuacao;
+        }
+    }
+
+    // Resultado de um candidato dentro de uma vaga específica, já com o
+    // tier (tipoSlot) e o tipo final atribuídos
     private static class Candidato {
         Estudante estudante;
         BigDecimal pontuacao;
         Integer posicao;
+        TipoSlot tipoSlot;
         Classificacao.Tipo tipo;
         boolean empate = false;
 
