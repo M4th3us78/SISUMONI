@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
       perfil: data.perfil,
     }))
     setUsuario({ nome: data.nome, email: data.email, perfil: data.perfil })
-    navigate('/dashboard')
+    navigate('/classificacao')
   }
 
   function logout() {
