@@ -23,4 +23,14 @@ public interface ResolucaoEmpateRepository extends JpaRepository<ResolucaoEmpate
 
     // Todas as resoluções de uma vaga (para limpar quando reabrir)
     List<ResolucaoEmpate> findByVagaId(UUID vagaId);
+
+    // Todas as resoluções do sistema, com vaga/vencedor/perdedor carregados
+    // (usado pelo recálculo global, que processa todas as vagas de uma vez)
+    @Query("""
+        SELECT r FROM ResolucaoEmpate r
+        JOIN FETCH r.vaga
+        JOIN FETCH r.vencedor
+        JOIN FETCH r.perdedor
+        """)
+    List<ResolucaoEmpate> findAllComEstudantes();
 }

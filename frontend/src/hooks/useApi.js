@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   turmasApi, departamentosApi, vagasApi, estudantesApi, operadoresApi,
 } from '../lib/recursos'
@@ -64,6 +64,18 @@ export function useClassificacao(vagaId) {
     queryKey: ['classificacao', vagaId],
     queryFn: () => vagasApi.classificacao(vagaId),
     enabled: !!vagaId, // só busca se tiver vagaId
+  })
+}
+
+// Busca a classificação de várias vagas em paralelo (mesma queryKey do
+// useClassificacao, então o cache é compartilhado entre os dois hooks)
+export function useClassificacoesPorVagas(vagaIds) {
+  return useQueries({
+    queries: (vagaIds || []).map((id) => ({
+      queryKey: ['classificacao', id],
+      queryFn: () => vagasApi.classificacao(id),
+      enabled: !!id,
+    })),
   })
 }
 
