@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   useVagas, useCriarVaga, useDeletarVaga,
   useDepartamentos, useTurmas,
@@ -12,30 +12,46 @@ export default function Vagas() {
   const deletar = useDeletarVaga()
 
   const [modalAberto, setModalAberto] = useState(false)
+  const [departamentoId, setDepartamentoId] = useState('')
+
+  const vagasFiltradas = useMemo(
+    () => vagas?.filter(v => !departamentoId || v.departamento.id === departamentoId) ?? [],
+    [vagas, departamentoId]
+  )
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-4 gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-text1">Vagas de monitoria</h1>
           <p className="text-text2 text-sm mt-0.5">
-            {vagas?.length ?? 0} vagas cadastradas
+            {vagasFiltradas.length} {departamentoId ? 'neste departamento' : 'vagas cadastradas'}
           </p>
         </div>
-        <button
-          onClick={() => setModalAberto(true)}
-          className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
-        >
-          Nova vaga
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={departamentoId}
+            onChange={(e) => setDepartamentoId(e.target.value)}
+            className="field w-auto py-1.5"
+          >
+            <option value="">Todos os departamentos</option>
+            {departamentos?.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+          </select>
+          <button
+            onClick={() => setModalAberto(true)}
+            className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
+          >
+            Nova vaga
+          </button>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
         {isLoading ? (
           <p className="text-text2 text-sm p-4">Carregando...</p>
-        ) : !vagas?.length ? (
+        ) : !vagasFiltradas.length ? (
           <p className="text-text2 text-sm p-4">
-            Nenhuma vaga cadastrada. Clique em "Nova vaga" para começar.
+            {departamentoId ? 'Nenhuma vaga neste departamento.' : 'Nenhuma vaga cadastrada. Clique em "Nova vaga" para começar.'}
           </p>
         ) : (
           <table className="w-full">
@@ -48,7 +64,7 @@ export default function Vagas() {
               </tr>
             </thead>
             <tbody>
-              {vagas.map((v) => (
+              {vagasFiltradas.map((v) => (
                 <tr key={v.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
                   <td className="px-4 py-2.5">
                     <div className="text-sm font-medium text-text1">{v.disciplina}</div>

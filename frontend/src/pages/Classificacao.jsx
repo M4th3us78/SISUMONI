@@ -1,20 +1,18 @@
-import { useState, useEffect } from 'react'
-import { useVagas, useClassificacao, useResolverEmpate } from '../hooks/useApi'
+import { useState, useMemo } from 'react'
+import { useVagas, useDepartamentos, useClassificacoesPorVagas, useResolverEmpate } from '../hooks/useApi'
+import { fmtNota, tipoBadge } from '../lib/formato'
 
 export default function Classificacao() {
   const { data: vagas, isLoading: carregandoVagas } = useVagas()
-  const [vagaId, setVagaId] = useState(null)
-  const [modalEmpate, setModalEmpate] = useState(false)
+  const { data: departamentos } = useDepartamentos()
+  const [departamentoId, setDepartamentoId] = useState('')
 
-  useEffect(() => {
-    if (vagas?.length && !vagaId) setVagaId(vagas[0].id)
-  }, [vagas, vagaId])
-
-  const { data: classificacao, isLoading: carregandoClass } = useClassificacao(vagaId)
-
-  const vagaAtual = vagas?.find(v => v.id === vagaId)
-  const empatados = classificacao?.filter(c => c.empate) || []
-  const temEmpate = empatados.length > 0
+  const vagasFiltradas = useMemo(
+    () => vagas?.filter(v => !departamentoId || v.departamento.id === departamentoId) ?? [],
+    [vagas, departamentoId]
+  )
+  const vagaIds = useMemo(() => vagasFiltradas.map(v => v.id), [vagasFiltradas])
+  const resultados = useClassificacoesPorVagas(vagaIds)
 
   if (carregandoVagas) return <p className="text-text2">Carregando vagas...</p>
 
@@ -29,30 +27,57 @@ export default function Classificacao() {
     )
   }
 
-  const fmt = (n) => Number(n).toFixed(4).replace('.', ',')
+  return (
+    <div>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-display font-bold text-text1">Classificação</h1>
+          <p className="text-text2 text-sm mt-0.5">
+            A lista é recalculada automaticamente a cada cadastro
+          </p>
+        </div>
+        <select
+          value={departamentoId}
+          onChange={(e) => setDepartamentoId(e.target.value)}
+          className="field w-auto py-1.5"
+        >
+          <option value="">Todos os departamentos</option>
+          {departamentos?.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+        </select>
+      </div>
 
-  const tipoTag = (tipo, empate) => {
-    if (empate) return <span className="badge badge-yellow">Empate</span>
-    if (tipo === 'BOLSISTA') return <span className="badge badge-green">Bolsista</span>
-    if (tipo === 'VOLUNTARIO') return <span className="badge badge-accent">Voluntário</span>
-    if (tipo === 'LISTA_ESPERA') return <span className="badge badge-neutral">Lista de espera</span>
-    return <span className="badge badge-neutral">Fora</span>
-  }
+      {!vagasFiltradas.length ? (
+        <p className="text-text2 text-sm">Nenhuma vaga neste departamento.</p>
+      ) : (
+        <div className="grid grid-cols-1 2xl:grid-cols-2 gap-4 items-start">
+          {vagasFiltradas.map((vaga, i) => (
+            <VagaCard
+              key={vaga.id}
+              vaga={vaga}
+              classificacao={resultados[i]?.data}
+              isLoading={resultados[i]?.isLoading}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Card de uma vaga com sua tabela de classificação ────
+function VagaCard({ vaga, classificacao, isLoading }) {
+  const [modalEmpate, setModalEmpate] = useState(false)
+
+  const empatados = classificacao?.filter(c => c.empate) || []
+  const temEmpate = empatados.length > 0
 
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-xl font-display font-bold text-text1">Classificação</h1>
-        <p className="text-text2 text-sm mt-0.5">
-          A lista é recalculada automaticamente a cada cadastro
-        </p>
-      </div>
-
       {temEmpate && (
-        <div className="bg-warning-dim border border-warning/30 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+        <div className="bg-warning-dim border border-warning/30 rounded-xl px-4 py-3 mb-2 flex items-center gap-3">
           <span className="w-2 h-2 rounded-full bg-warning shrink-0"></span>
           <p className="text-sm text-warning flex-1">
-            Empate na fronteira desta vaga. A posição provisória precisa ser decidida.
+            Empate na fronteira de <strong>{vaga.disciplina}</strong>. A posição provisória precisa ser decidida.
           </p>
           <button
             onClick={() => setModalEmpate(true)}
@@ -64,23 +89,14 @@ export default function Classificacao() {
       )}
 
       <div className="card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-text1">{vagaAtual?.disciplina}</p>
-            <p className="text-xs text-text2 mt-0.5">
-              {vagaAtual?.qtdBolsistas} bolsistas · {vagaAtual?.qtdVoluntarios} voluntários · {vagaAtual?.qtdListaEspera} em espera
-            </p>
-          </div>
-          <select
-            value={vagaId || ''}
-            onChange={(e) => setVagaId(e.target.value)}
-            className="field w-auto py-1.5"
-          >
-            {vagas.map(v => <option key={v.id} value={v.id}>{v.disciplina}</option>)}
-          </select>
+        <div className="px-4 py-3 border-b border-border">
+          <p className="text-sm font-semibold text-text1">{vaga.disciplina}</p>
+          <p className="text-xs text-text2 mt-0.5">
+            Prof. {vaga.professor} · {vaga.qtdBolsistas} bolsistas · {vaga.qtdVoluntarios} voluntários · {vaga.qtdListaEspera} em espera
+          </p>
         </div>
 
-        {carregandoClass ? (
+        {isLoading ? (
           <p className="text-text2 text-sm p-4">Carregando classificação...</p>
         ) : !classificacao?.length ? (
           <p className="text-text2 text-sm p-4">Nenhum estudante inscrito nesta vaga ainda.</p>
@@ -95,24 +111,27 @@ export default function Classificacao() {
               </tr>
             </thead>
             <tbody>
-              {classificacao.map((c) => (
-                <tr key={c.estudanteId} className={`border-b border-border2 last:border-0 hover:bg-surface2 ${c.empate ? 'bg-warning-dim/40' : ''}`}>
-                  <td className="px-4 py-2.5">
-                    <span className={`rank-pos ${
-                      c.tipo === 'BOLSISTA' ? 'rank-1' :
-                      (c.tipo === 'LISTA_ESPERA' || !c.tipo) ? 'rank-n' : 'rank-2'
-                    }`}>
-                      {c.tipo === 'LISTA_ESPERA' || !c.tipo ? '–' : c.posicao}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="text-sm font-medium text-text1">{c.nome || c.nomeFantasia}</div>
-                    {c.nome && <div className="text-xs text-text3">{c.nomeFantasia}</div>}
-                  </td>
-                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums text-text1 font-mono">{fmt(c.pontuacao)}</td>
-                  <td className="px-4 py-2.5">{tipoTag(c.tipo, c.empate)}</td>
-                </tr>
-              ))}
+              {classificacao.map((c) => {
+                const badge = tipoBadge(c.tipo, c.empate)
+                return (
+                  <tr key={c.estudanteId} className={`border-b border-border2 last:border-0 hover:bg-surface2 ${c.empate ? 'bg-warning-dim/40' : ''}`}>
+                    <td className="px-4 py-2.5">
+                      <span className={`rank-pos ${
+                        c.tipo === 'BOLSISTA' ? 'rank-1' :
+                        (c.tipo === 'LISTA_ESPERA' || !c.tipo) ? 'rank-n' : 'rank-2'
+                      }`}>
+                        {c.tipo === 'LISTA_ESPERA' || !c.tipo ? '–' : c.posicao}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="text-sm font-medium text-text1">{c.nome || c.nomeFantasia}</div>
+                      {c.nome && <div className="text-xs text-text3">{c.nomeFantasia}</div>}
+                    </td>
+                    <td className="px-4 py-2.5 text-sm font-medium tabular-nums text-text1 font-mono">{fmtNota(c.pontuacao)}</td>
+                    <td className="px-4 py-2.5"><span className={`badge ${badge.classe}`}>{badge.texto}</span></td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
@@ -120,7 +139,7 @@ export default function Classificacao() {
 
       {modalEmpate && (
         <ModalEmpate
-          vagaId={vagaId}
+          vagaId={vaga.id}
           empatados={empatados}
           onFechar={() => setModalEmpate(false)}
         />
@@ -133,8 +152,6 @@ export default function Classificacao() {
 function ModalEmpate({ vagaId, empatados, onFechar }) {
   const resolver = useResolverEmpate()
   const [vencedorId, setVencedorId] = useState(null)
-
-  const fmt = (n) => Number(n).toFixed(4).replace('.', ',')
 
   // Assumindo empate de dois (o múltiplo é pós-MVP)
   const [a, b] = empatados
@@ -169,7 +186,7 @@ function ModalEmpate({ vagaId, empatados, onFechar }) {
         <span>
           <span className="text-sm font-medium block text-text1">{c.nome || c.nomeFantasia}</span>
           <span className="text-xs text-text2 tabular-nums font-mono">
-            Pontuação {fmt(c.pontuacao)}
+            Pontuação {fmtNota(c.pontuacao)}
           </span>
         </span>
       </button>
