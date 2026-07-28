@@ -141,10 +141,22 @@ public class EstudanteService {
 
     // ── Helpers ───────────────────────────────────────────────────
 
+    private void verificarTurmaElegivel(Vaga vaga, Turma turma, String qualOpcao) {
+    boolean turmaElegivel = vaga.getTurmas().stream()
+            .anyMatch(t -> t.getId().equals(turma.getId()));
+
+    if (!turmaElegivel) {
+        throw new RegraDeNegocioException(
+                "A vaga de " + vaga.getDisciplina() + " (" + qualOpcao
+                + ") não está disponível para a turma " + turma.getNome());
+    }
+}
     private void preencher(Estudante estudante, EstudanteRequest request, Turma turma) {
         Vaga opcao1 = vagaRepository.findByIdComRelacionamentos(request.opcao1Id())
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Vaga da 1ª opção não encontrada"));
+
+        verificarTurmaElegivel(opcao1, turma, "1ª opção");
 
         estudante.setNome(request.nome());
         estudante.setMatricula(request.matricula());
@@ -158,6 +170,9 @@ public class EstudanteService {
             Vaga opcao2 = vagaRepository.findByIdComRelacionamentos(request.opcao2Id())
                     .orElseThrow(() -> new RecursoNaoEncontradoException(
                             "Vaga da 2ª opção não encontrada"));
+
+            verificarTurmaElegivel(opcao2, turma, "2ª opção");
+
             estudante.setOpcao2(opcao2);
             estudante.setMediaOpcao2(BigDecimal.valueOf(request.mediaOpcao2()));
         } else {
