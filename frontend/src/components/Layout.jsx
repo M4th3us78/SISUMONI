@@ -51,7 +51,7 @@ export default function Layout({ children }) {
           )}
         </nav>
 
-        <main className="p-6 max-w-5xl">{children}</main>
+        <main className="p-6 w-full max-w-[1600px]">{children}</main>
       </div>
     </div>
   )

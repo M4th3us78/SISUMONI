@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   useEstudantes, useCriarEstudante, useDeletarEstudante,
-  useTurmas, useVagas,
+  useTurmas, useVagas, useClassificacoesPorVagas,
 } from '../hooks/useApi'
 import { useAuth } from '../contexts/AuthContext'
+import { fmtNota, tipoBadge } from '../lib/formato'
 
 export default function Estudantes() {
   const { usuario } = useAuth()
@@ -16,66 +17,134 @@ export default function Estudantes() {
   const deletar = useDeletarEstudante()
 
   const [modalAberto, setModalAberto] = useState(false)
+  const [turmaId, setTurmaId] = useState('')
 
-  const fmt = (n) => (n == null ? '—' : Number(n).toFixed(3).replace('.', ','))
+  const estudantesFiltrados = useMemo(
+    () => estudantes?.filter(e => !turmaId || e.turma.id === turmaId) ?? [],
+    [estudantes, turmaId]
+  )
+
+  // Ids únicos das vagas escolhidas (1ª ou 2ª opção) pelos estudantes visíveis
+  const vagaIds = useMemo(() => {
+    const ids = new Set()
+    estudantesFiltrados.forEach(e => {
+      if (e.opcao1) ids.add(e.opcao1.id)
+      if (e.opcao2) ids.add(e.opcao2.id)
+    })
+    return [...ids]
+  }, [estudantesFiltrados])
+
+  const resultadosClassificacao = useClassificacoesPorVagas(vagaIds)
+
+  // Mapa `${vagaId}_${estudanteId}` -> { tipo, posicao, pontuacao, empate }
+  const mapaClassificacao = useMemo(() => {
+    const mapa = new Map()
+    resultadosClassificacao.forEach((r, i) => {
+      const vagaId = vagaIds[i]
+      r.data?.forEach(c => mapa.set(`${vagaId}_${c.estudanteId}`, c))
+    })
+    return mapa
+  }, [resultadosClassificacao, vagaIds])
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-4 gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-text1">Estudantes</h1>
           <p className="text-text2 text-sm mt-0.5">
-            {estudantes?.length ?? 0} cadastrados
+            {estudantesFiltrados.length} {turmaId ? 'nesta turma' : 'cadastrados'}
           </p>
         </div>
-        <button
-          onClick={() => setModalAberto(true)}
-          className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
-        >
-          Novo estudante
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={turmaId}
+            onChange={(e) => setTurmaId(e.target.value)}
+            className="field w-auto py-1.5"
+          >
+            <option value="">Todas as turmas</option>
+            {turmas?.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+          </select>
+          <button
+            onClick={() => setModalAberto(true)}
+            className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
+          >
+            Novo estudante
+          </button>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
         {isLoading ? (
           <p className="text-text2 text-sm p-4">Carregando...</p>
-        ) : !estudantes?.length ? (
+        ) : !estudantesFiltrados.length ? (
           <p className="text-text2 text-sm p-4">
-            Nenhum estudante cadastrado. Clique em "Novo estudante" para começar.
+            {turmaId
+              ? 'Nenhum estudante cadastrado nesta turma.'
+              : 'Nenhum estudante cadastrado. Clique em "Novo estudante" para começar.'}
           </p>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Nome</th>
-                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-28">Matrícula</th>
-                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-20">IRA</th>
-                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-16"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {estudantes.map((e) => (
-                <tr key={e.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
-                  <td className="px-4 py-2.5">
-                    <div className="text-sm font-medium text-text1">{e.nome}</div>
-                    <div className="text-xs text-text3">{e.nomeFantasia}</div>
-                  </td>
-                  <td className="px-4 py-2.5 text-sm text-text2 tabular-nums font-mono">{e.matricula}</td>
-                  <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono">{fmt(e.ira)}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <button
-                      onClick={() => {
-                        if (confirm(`Remover ${e.nome}?`)) deletar.mutate(e.id)
-                      }}
-                      className="text-xs text-danger hover:text-danger/80"
-                    >
-                      Remover
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  {[
+                    'Nome', 'Matrícula', 'IRA',
+                    '1ª opção', 'Média', 'Pontuação', 'Situação',
+                    '2ª opção', 'Média', 'Pontuação', 'Situação',
+                    '',
+                  ].map((titulo, i) => (
+                    <th key={i} className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 whitespace-nowrap">
+                      {titulo}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {estudantesFiltrados.map((e) => {
+                  const c1 = e.opcao1 ? mapaClassificacao.get(`${e.opcao1.id}_${e.id}`) : null
+                  const c2 = e.opcao2 ? mapaClassificacao.get(`${e.opcao2.id}_${e.id}`) : null
+                  const badge1 = tipoBadge(c1?.tipo, c1?.empate)
+                  const badge2 = tipoBadge(c2?.tipo, c2?.empate)
+
+                  return (
+                    <tr key={e.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
+                      <td className="px-4 py-2.5">
+                        <div className="text-sm font-medium text-text1">{e.nome}</div>
+                        <div className="text-xs text-text3">{e.nomeFantasia}</div>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm text-text2 tabular-nums font-mono whitespace-nowrap">{e.matricula}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono whitespace-nowrap">{fmtNota(e.ira)}</td>
+
+                      <td className="px-4 py-2.5 text-sm text-text1 whitespace-nowrap">{e.opcao1?.disciplina ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums text-text2 font-mono whitespace-nowrap">{fmtNota(e.mediaOpcao1)}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono whitespace-nowrap">{fmtNota(c1?.pontuacao)}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {e.opcao1 ? <span className={`badge ${badge1.classe}`}>{badge1.texto}</span> : '—'}
+                      </td>
+
+                      <td className="px-4 py-2.5 text-sm text-text1 whitespace-nowrap">{e.opcao2?.disciplina ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums text-text2 font-mono whitespace-nowrap">{fmtNota(e.mediaOpcao2)}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono whitespace-nowrap">{fmtNota(c2?.pontuacao)}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {e.opcao2 ? <span className={`badge ${badge2.classe}`}>{badge2.texto}</span> : '—'}
+                      </td>
+
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remover ${e.nome}?`)) deletar.mutate(e.id)
+                          }}
+                          className="text-xs text-danger hover:text-danger/80"
+                        >
+                          Remover
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -148,6 +217,12 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
     return
   }
 
+  // 2ª opção obrigatória
+  if (!form.opcao2Id) {
+    alert('Selecione a vaga da 2ª opção.')
+    return
+  }
+
   // Validação numérica do IRA
   const iraNum = paraNumero(form.ira)
   if (isNaN(iraNum) || iraNum < 0 || iraNum > 10) {
@@ -162,14 +237,11 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
     return
   }
 
-  // Validação da 2ª opção (só se preenchida)
-  let media2Num = null
-  if (form.opcao2Id) {
-    media2Num = paraNumero(form.mediaOpcao2)
-    if (isNaN(media2Num) || media2Num < 0 || media2Num > 10) {
-      alert('A média da 2ª opção deve ser um número entre 0 e 10.')
-      return
-    }
+  // Validação numérica da média da 2ª opção
+  const media2Num = paraNumero(form.mediaOpcao2)
+  if (isNaN(media2Num) || media2Num < 0 || media2Num > 10) {
+    alert('A média da 2ª opção deve ser um número entre 0 e 10.')
+    return
   }
 
   const dados = {
@@ -180,7 +252,7 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
     ira: iraNum,
     opcao1Id: form.opcao1Id,
     mediaOpcao1: media1Num,
-    opcao2Id: form.opcao2Id || null,
+    opcao2Id: form.opcao2Id,
     mediaOpcao2: media2Num,
   }
   onSalvar(dados)
@@ -226,7 +298,7 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className="field-label">IRA (0 a 10)</label>
-              <input type="text" inputMode="decimal" placeholder="9,232" className="field" value={form.ira} onChange={(e) => set('ira', e.target.value)} />
+              <input type="text" inputMode="decimal" placeholder="8,8951" className="field" value={form.ira} onChange={(e) => set('ira', e.target.value)} />
             </div>
           </div>
 
@@ -265,10 +337,10 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
             </div>
           </div>
 
-          <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2 mt-4">2ª opção (opcional)</p>
+          <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2 mt-4">2ª opção</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label">Vaga</label>
+              <label className="field-label">2ª opção - vaga</label>
               <select
                 className="field"
                 value={form.opcao2Id}
@@ -276,7 +348,7 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
                 disabled={!form.turmaId}
               >
                 <option value="">
-                  {!form.turmaId ? 'Escolha a turma primeiro' : 'Nenhuma'}
+                  {!form.turmaId ? 'Escolha a turma primeiro' : 'Selecione'}
                 </option>
                 {vagasElegiveis
                   .filter((v) => v.id !== form.opcao1Id)
