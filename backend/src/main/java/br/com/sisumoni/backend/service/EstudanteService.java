@@ -70,11 +70,6 @@ public class EstudanteService {
         // Verifica se o operador pode mexer nesta turma
         verificarAcessoATurma(turma);
 
-        if (estudanteRepository.existsByMatricula(request.matricula())) {
-            throw new RegraDeNegocioException(
-                    "Já existe um estudante com a matrícula: " + request.matricula());
-        }
-
         Estudante estudante = new Estudante();
         preencher(estudante, request, turma);
         Estudante salvo = estudanteRepository.save(estudante);
@@ -102,13 +97,6 @@ public class EstudanteService {
 
         // Se está mudando de turma, verifica acesso à nova também
         verificarAcessoATurma(novaTurma);
-
-        // Matrícula única (exceto a do próprio estudante)
-        if (!estudante.getMatricula().equals(request.matricula())
-                && estudanteRepository.existsByMatricula(request.matricula())) {
-            throw new RegraDeNegocioException(
-                    "Já existe um estudante com a matrícula: " + request.matricula());
-        }
 
         preencher(estudante, request, novaTurma);
         Estudante salvo = estudanteRepository.save(estudante);
@@ -154,21 +142,30 @@ public class EstudanteService {
         verificarTurmaElegivel(opcao1, turma, "1ª opção");
 
         estudante.setNome(request.nome());
-        estudante.setMatricula(request.matricula());
         estudante.setNomeFantasia(request.nomeFantasia());
         estudante.setTurma(turma);
         estudante.setIra(request.ira().setScale(4, RoundingMode.HALF_UP));
         estudante.setOpcao1(opcao1);
         estudante.setMediaOpcao1(BigDecimal.valueOf(request.mediaOpcao1()));
 
-        Vaga opcao2 = vagaRepository.findByIdComRelacionamentos(request.opcao2Id())
-                .orElseThrow(() -> new RecursoNaoEncontradoException(
-                        "Vaga da 2ª opção não encontrada"));
+        if ((request.opcao2Id() == null) != (request.mediaOpcao2() == null)) {
+            throw new RegraDeNegocioException(
+                    "Informe a vaga e a média da 2ª opção juntas, ou deixe os dois em branco");
+        }
 
-        verificarTurmaElegivel(opcao2, turma, "2ª opção");
+        if (request.opcao2Id() != null) {
+            Vaga opcao2 = vagaRepository.findByIdComRelacionamentos(request.opcao2Id())
+                    .orElseThrow(() -> new RecursoNaoEncontradoException(
+                            "Vaga da 2ª opção não encontrada"));
 
-        estudante.setOpcao2(opcao2);
-        estudante.setMediaOpcao2(BigDecimal.valueOf(request.mediaOpcao2()));
+            verificarTurmaElegivel(opcao2, turma, "2ª opção");
+
+            estudante.setOpcao2(opcao2);
+            estudante.setMediaOpcao2(BigDecimal.valueOf(request.mediaOpcao2()));
+        } else {
+            estudante.setOpcao2(null);
+            estudante.setMediaOpcao2(null);
+        }
     }
 
     private Usuario usuarioLogado() {

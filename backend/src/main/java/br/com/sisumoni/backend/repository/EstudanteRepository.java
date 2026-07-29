@@ -11,7 +11,6 @@ import java.util.UUID;
 
 @Repository
 public interface EstudanteRepository extends JpaRepository<Estudante, UUID> {
-    boolean existsByMatricula(String matricula);
     List<Estudante> findByTurmaId(UUID turmaId);
     boolean existsByTurmaId(UUID turmaId);
     boolean existsByOpcao1IdOrOpcao2Id(UUID opcao1Id, UUID opcao2Id);

@@ -1,5 +1,6 @@
 package br.com.sisumoni.backend.dto;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,7 +23,8 @@ public record VagaRequest(
         @Min(value = 0, message = "A quantidade de voluntários não pode ser negativa")
         Integer qtdVoluntarios,
 
-        @Min(value = 0, message = "A quantidade de pessoas na lista de espera não pode ser negativa")
+        @Min(value = 1, message = "A lista de espera é sempre 1")
+        @Max(value = 1, message = "A lista de espera é sempre 1")
         Integer qtdListaEspera,
 
         Set<UUID> turmasIds

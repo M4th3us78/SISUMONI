@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import {
-  useEstudantes, useCriarEstudante, useDeletarEstudante,
+  useEstudantes, useCriarEstudante, useAtualizarEstudante, useDeletarEstudante,
   useTurmas, useVagas, useClassificacoesPorVagas,
 } from '../hooks/useApi'
 import { useAuth } from '../contexts/AuthContext'
@@ -14,14 +14,21 @@ export default function Estudantes() {
   const { data: turmas } = useTurmas()
   const { data: vagas } = useVagas()
   const criar = useCriarEstudante()
+  const atualizar = useAtualizarEstudante()
   const deletar = useDeletarEstudante()
 
-  const [modalAberto, setModalAberto] = useState(false)
+  const [modalEstudante, setModalEstudante] = useState(null)
   const [turmaId, setTurmaId] = useState('')
 
   const estudantesFiltrados = useMemo(
-    () => estudantes?.filter(e => !turmaId || e.turma.id === turmaId) ?? [],
+    () => (estudantes?.filter(e => !turmaId || e.turma.id === turmaId) ?? [])
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
     [estudantes, turmaId]
+  )
+
+  const turmasOrdenadas = useMemo(
+    () => [...(turmas ?? [])].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+    [turmas]
   )
 
   // Ids únicos das vagas escolhidas (1ª ou 2ª opção) pelos estudantes visíveis
@@ -62,10 +69,10 @@ export default function Estudantes() {
             className="field w-auto py-1.5"
           >
             <option value="">Todas as turmas</option>
-            {turmas?.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+            {turmasOrdenadas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
           </select>
           <button
-            onClick={() => setModalAberto(true)}
+            onClick={() => setModalEstudante({})}
             className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
           >
             Novo estudante
@@ -73,22 +80,27 @@ export default function Estudantes() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        {isLoading ? (
-          <p className="text-text2 text-sm p-4">Carregando...</p>
-        ) : !estudantesFiltrados.length ? (
-          <p className="text-text2 text-sm p-4">
+      {isLoading ? (
+        <div className="card p-4">
+          <p className="text-text2 text-sm">Carregando...</p>
+        </div>
+      ) : !estudantesFiltrados.length ? (
+        <div className="card p-4">
+          <p className="text-text2 text-sm">
             {turmaId
               ? 'Nenhum estudante cadastrado nesta turma.'
               : 'Nenhum estudante cadastrado. Clique em "Novo estudante" para começar.'}
           </p>
-        ) : (
-          <div className="overflow-x-auto">
+        </div>
+      ) : (
+        <>
+          {/* Tabela — telas lg+ */}
+          <div className="card overflow-hidden overflow-x-auto hidden lg:block">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
                   {[
-                    'Nome', 'Matrícula', 'IRA',
+                    'Nome', 'Nome fantasia', 'IRA',
                     '1ª opção', 'Média', 'Pontuação', 'Situação',
                     '2ª opção', 'Média', 'Pontuação', 'Situação',
                     '',
@@ -110,9 +122,8 @@ export default function Estudantes() {
                     <tr key={e.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
                       <td className="px-4 py-2.5">
                         <div className="text-sm font-medium text-text1">{e.nome}</div>
-                        <div className="text-xs text-text3">{e.nomeFantasia}</div>
                       </td>
-                      <td className="px-4 py-2.5 text-sm text-text2 tabular-nums font-mono whitespace-nowrap">{e.matricula}</td>
+                      <td className="px-4 py-2.5 text-sm font-medium text-gold-light whitespace-nowrap">{e.nomeFantasia}</td>
                       <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono whitespace-nowrap">{fmtNota(e.ira)}</td>
 
                       <td className="px-4 py-2.5 text-sm text-text1 whitespace-nowrap">{e.opcao1?.disciplina ?? '—'}</td>
@@ -131,6 +142,12 @@ export default function Estudantes() {
 
                       <td className="px-4 py-2.5 text-right whitespace-nowrap">
                         <button
+                          onClick={() => setModalEstudante(e)}
+                          className="text-xs text-accent hover:text-accent-light mr-3"
+                        >
+                          Editar
+                        </button>
+                        <button
                           onClick={() => {
                             if (confirm(`Remover ${e.nome}?`)) deletar.mutate(e.id)
                           }}
@@ -145,23 +162,94 @@ export default function Estudantes() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
 
-      {modalAberto && (
+          {/* Cards — telas menores que lg */}
+          <div className="flex flex-col gap-3 lg:hidden">
+            {estudantesFiltrados.map((e) => {
+              const c1 = e.opcao1 ? mapaClassificacao.get(`${e.opcao1.id}_${e.id}`) : null
+              const c2 = e.opcao2 ? mapaClassificacao.get(`${e.opcao2.id}_${e.id}`) : null
+              const badge1 = tipoBadge(c1?.tipo, c1?.empate)
+              const badge2 = tipoBadge(c2?.tipo, c2?.empate)
+
+              return (
+                <div key={e.id} className="card p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-medium text-text1">{e.nome}</div>
+                      <div className="text-sm font-medium text-gold-light">{e.nomeFantasia}</div>
+                    </div>
+                    <div className="text-xs text-text2 tabular-nums font-mono whitespace-nowrap">IRA {fmtNota(e.ira)}</div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-border2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">1ª opção</span>
+                      {e.opcao1 ? <span className={`badge ${badge1.classe}`}>{badge1.texto}</span> : '—'}
+                    </div>
+                    <div className="text-sm text-text1 mt-0.5">{e.opcao1?.disciplina ?? '—'}</div>
+                    {e.opcao1 && (
+                      <div className="text-xs text-text2 tabular-nums font-mono mt-0.5">
+                        Média {fmtNota(e.mediaOpcao1)} · Pontuação {fmtNota(c1?.pontuacao)}
+                      </div>
+                    )}
+                  </div>
+
+                  {e.opcao2 && (
+                    <div className="mt-3 pt-3 border-t border-border2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">2ª opção</span>
+                        <span className={`badge ${badge2.classe}`}>{badge2.texto}</span>
+                      </div>
+                      <div className="text-sm text-text1 mt-0.5">{e.opcao2.disciplina}</div>
+                      <div className="text-xs text-text2 tabular-nums font-mono mt-0.5">
+                        Média {fmtNota(e.mediaOpcao2)} · Pontuação {fmtNota(c2?.pontuacao)}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3 pt-3 border-t border-border2 flex justify-end gap-3">
+                    <button
+                      onClick={() => setModalEstudante(e)}
+                      className="text-xs text-accent hover:text-accent-light"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remover ${e.nome}?`)) deletar.mutate(e.id)
+                      }}
+                      className="text-xs text-danger hover:text-danger/80"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {modalEstudante !== null && (
         <ModalCadastro
-          turmas={turmas || []}
+          turmas={turmasOrdenadas}
           vagas={vagas || []}
-          onFechar={() => setModalAberto(false)}
+          estudante={modalEstudante}
+          onFechar={() => setModalEstudante(null)}
           onSalvar={(dados) => {
-            criar.mutate(dados, {
-              onSuccess: () => setModalAberto(false),
+            const opts = {
+              onSuccess: () => setModalEstudante(null),
               onError: (err) => {
-                alert(err.response?.data?.mensagem || 'Erro ao cadastrar estudante')
+                alert(err.response?.data?.mensagem || 'Erro ao salvar estudante')
               },
-            })
+            }
+            if (modalEstudante?.id) {
+              atualizar.mutate({ id: modalEstudante.id, dados }, opts)
+            } else {
+              criar.mutate(dados, opts)
+            }
           }}
-          salvando={criar.isPending}
+          salvando={modalEstudante?.id ? atualizar.isPending : criar.isPending}
         />
       )}
     </div>
@@ -169,10 +257,17 @@ export default function Estudantes() {
 }
 
 // ─── Modal de cadastro com cálculo ao vivo ───────────────
-function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
+function ModalCadastro({ turmas, vagas, estudante, onFechar, onSalvar, salvando }) {
+  const editando = !!estudante?.id
   const [form, setForm] = useState({
-    nome: '', matricula: '', nomeFantasia: '', turmaId: '',
-    ira: '', opcao1Id: '', mediaOpcao1: '', opcao2Id: '', mediaOpcao2: '',
+    nome: estudante?.nome ?? '',
+    nomeFantasia: estudante?.nomeFantasia ?? '',
+    turmaId: estudante?.turma?.id ?? '',
+    ira: estudante?.ira != null ? fmtNota(estudante.ira) : '',
+    opcao1Id: estudante?.opcao1?.id ?? '',
+    mediaOpcao1: estudante?.mediaOpcao1 != null ? fmtNota(estudante.mediaOpcao1) : '',
+    opcao2Id: estudante?.opcao2?.id ?? '',
+    mediaOpcao2: estudante?.mediaOpcao2 != null ? fmtNota(estudante.mediaOpcao2) : '',
   })
 
   const set = (campo, valor) => {
@@ -197,29 +292,29 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
   const media1 = paraNumero(form.mediaOpcao1)
   const pontuacao1 = (!isNaN(ira) && !isNaN(media1)) ? (ira + media1) : null
 
+  // Cálculo ao vivo da pontuação da 2ª opção
+  const media2 = paraNumero(form.mediaOpcao2)
+  const pontuacao2 = (!isNaN(ira) && !isNaN(media2)) ? (ira + media2) : null
+
   // Vagas elegíveis para a turma selecionada
   const vagasElegiveis = form.turmaId
-  ? vagas.filter((v) => v.turmas?.some((t) => t.id === form.turmaId))
+  ? vagas
+      .filter((v) => v.turmas?.some((t) => t.id === form.turmaId))
+      .sort((a, b) => a.disciplina.localeCompare(b.disciplina, 'pt-BR'))
   : []
 
   const fmt = (n) => n.toFixed(4).replace('.', ',')
 
   function submeter() {
   // Campos de texto obrigatórios
-  if (!form.nome.trim() || !form.matricula.trim() || !form.nomeFantasia.trim() || !form.turmaId) {
-    alert('Preencha nome, nome fantasia, matrícula e turma.')
+  if (!form.nome.trim() || !form.nomeFantasia.trim() || !form.turmaId) {
+    alert('Preencha nome, nome fantasia e turma.')
     return
   }
 
   // 1ª opção obrigatória
   if (!form.opcao1Id) {
     alert('Selecione a vaga da 1ª opção.')
-    return
-  }
-
-  // 2ª opção obrigatória
-  if (!form.opcao2Id) {
-    alert('Selecione a vaga da 2ª opção.')
     return
   }
 
@@ -237,23 +332,25 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
     return
   }
 
-  // Validação numérica da média da 2ª opção
-  const media2Num = paraNumero(form.mediaOpcao2)
-  if (isNaN(media2Num) || media2Num < 0 || media2Num > 10) {
-    alert('A média da 2ª opção deve ser um número entre 0 e 10.')
-    return
+  // Validação numérica da média da 2ª opção (só se foi selecionada)
+  let media2Num = null
+  if (form.opcao2Id) {
+    media2Num = paraNumero(form.mediaOpcao2)
+    if (isNaN(media2Num) || media2Num < 0 || media2Num > 10) {
+      alert('A média da 2ª opção deve ser um número entre 0 e 10.')
+      return
+    }
   }
 
   const dados = {
     nome: form.nome.trim(),
-    matricula: form.matricula.trim(),
     nomeFantasia: form.nomeFantasia.trim(),
     turmaId: form.turmaId,
     ira: iraNum,
     opcao1Id: form.opcao1Id,
     mediaOpcao1: media1Num,
-    opcao2Id: form.opcao2Id,
-    mediaOpcao2: media2Num,
+    opcao2Id: form.opcao2Id || null,
+    mediaOpcao2: form.opcao2Id ? media2Num : null,
   }
   onSalvar(dados)
 }
@@ -265,7 +362,7 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold text-text1">Cadastrar estudante</h2>
+          <h2 className="text-sm font-semibold text-text1">{editando ? 'Editar estudante' : 'Cadastrar estudante'}</h2>
         </div>
 
         <div className="p-5">
@@ -281,10 +378,6 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="field-label">Matrícula</label>
-              <input className="field" value={form.matricula} onChange={(e) => set('matricula', e.target.value)} />
-            </div>
             <div>
               <label className="field-label">Turma</label>
               <select className="field" value={form.turmaId} onChange={(e) => set('turmaId', e.target.value)}>
@@ -315,7 +408,7 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
                   {!form.turmaId ? 'Escolha a turma primeiro' : 'Selecione'}
                 </option>
                 {vagasElegiveis.map((v) => (
-                  <option key={v.id} value={v.id}>{v.disciplina}</option>
+                  <option key={v.id} value={v.id}>{v.disciplina} — Prof. {v.professor}</option>
                 ))}
               </select>
             </div>
@@ -337,7 +430,7 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
             </div>
           </div>
 
-          <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2 mt-4">2ª opção</p>
+          <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2 mt-4">2ª opção (opcional)</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">2ª opção - vaga</label>
@@ -353,7 +446,7 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
                 {vagasElegiveis
                   .filter((v) => v.id !== form.opcao1Id)
                   .map((v) => (
-                    <option key={v.id} value={v.id}>{v.disciplina}</option>
+                    <option key={v.id} value={v.id}>{v.disciplina} — Prof. {v.professor}</option>
                   ))}
               </select>
             </div>
@@ -362,6 +455,19 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
               <input type="text" inputMode="decimal" placeholder="8,0" className="field" value={form.mediaOpcao2} onChange={(e) => set('mediaOpcao2', e.target.value)} />
             </div>
           </div>
+
+          {form.opcao2Id && (
+            <div className="bg-surface2 border border-border2 rounded-lg px-4 py-3 flex items-center justify-between mt-4">
+              <div className="text-xs text-text2">
+                {pontuacao2 != null
+                  ? <>Pontuação = <span className="tabular-nums font-mono">{fmt(ira)}</span> + <span className="tabular-nums font-mono">{fmt(media2)}</span></>
+                  : 'Preencha a média para ver a pontuação'}
+              </div>
+              <div className={`text-2xl font-display font-bold tabular-nums ${pontuacao2 != null ? 'text-gold-light' : 'text-text3'}`}>
+                {pontuacao2 != null ? fmt(pontuacao2) : '—'}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="px-5 py-4 border-t border-border flex justify-end gap-2">
@@ -373,7 +479,7 @@ function ModalCadastro({ turmas, vagas, onFechar, onSalvar, salvando }) {
             disabled={salvando}
             className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light disabled:opacity-50 transition-colors"
           >
-            {salvando ? 'Salvando...' : 'Salvar estudante'}
+            {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Salvar estudante'}
           </button>
         </div>
       </div>

@@ -8,9 +8,6 @@ public record EstudanteRequest(
         @NotBlank(message = "Nome é obrigatório")
         String nome,
 
-        @NotBlank(message = "Matrícula é obrigatória")
-        String matricula,
-
         @NotBlank(message = "Nome fantasia é obrigatório")
         String nomeFantasia,
 
@@ -30,10 +27,8 @@ public record EstudanteRequest(
         @DecimalMin(value = "0.0") @DecimalMax(value = "10.0")
         Double mediaOpcao1,
 
-        @NotNull(message = "2ª opção é obrigatória")
         UUID opcao2Id,
 
-        @NotNull(message = "Média da 2ª opção é obrigatória")
         @DecimalMin(value = "0.0") @DecimalMax(value = "10.0")
         Double mediaOpcao2
 ) {}

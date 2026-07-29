@@ -15,9 +15,6 @@ public class Estudante {
     @Column(nullable = false, length = 150)
     private String nome;
 
-    @Column(nullable = false, unique = true, length = 20)
-    private String matricula;
-
     @Column(name = "nome_fantasia", nullable = false, length = 50)
     private String nomeFantasia;
 
@@ -48,8 +45,6 @@ public class Estudante {
     public void setId(UUID id) { this.id = id; }
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
-    public String getMatricula() { return matricula; }
-    public void setMatricula(String matricula) { this.matricula = matricula; }
     public String getNomeFantasia() { return nomeFantasia; }
     public void setNomeFantasia(String nomeFantasia) { this.nomeFantasia = nomeFantasia; }
     public Turma getTurma() { return turma; }
