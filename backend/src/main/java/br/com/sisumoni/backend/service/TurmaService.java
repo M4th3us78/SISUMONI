@@ -1,10 +1,12 @@
 package br.com.sisumoni.backend.service;
 
 import br.com.sisumoni.backend.domain.Turma;
+import br.com.sisumoni.backend.domain.Usuario;
 import br.com.sisumoni.backend.exception.RecursoNaoEncontradoException;
 import br.com.sisumoni.backend.exception.RegraDeNegocioException;
 import br.com.sisumoni.backend.repository.EstudanteRepository;
 import br.com.sisumoni.backend.repository.TurmaRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,8 +23,21 @@ public class TurmaService {
         this.estudanteRepository = estudanteRepository;
     }
 
+    // ── Listagem filtrada por perfil ──────────────────────────────
     public List<Turma> listar() {
-        return turmaRepository.findAll();
+        Usuario logado = usuarioLogado();
+
+        if (logado.getPerfil() == Usuario.Perfil.ADMIN) {
+            return turmaRepository.findAll();
+        }
+
+        // Operador vê só as turmas pelas quais é responsável
+        return logado.getTurmas().stream().toList();
+    }
+
+    private Usuario usuarioLogado() {
+        return (Usuario) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
     }
 
     public Turma buscarPorId(UUID id) {

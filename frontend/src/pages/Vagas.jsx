@@ -15,7 +15,8 @@ export default function Vagas() {
   const [departamentoId, setDepartamentoId] = useState('')
 
   const vagasFiltradas = useMemo(
-    () => vagas?.filter(v => !departamentoId || v.departamento.id === departamentoId) ?? [],
+    () => (vagas?.filter(v => !departamentoId || v.departamento.id === departamentoId) ?? [])
+      .sort((a, b) => a.disciplina.localeCompare(b.disciplina, 'pt-BR')),
     [vagas, departamentoId]
   )
 
@@ -58,6 +59,7 @@ export default function Vagas() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Disciplina</th>
+                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-48">Professor</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-44">Departamento</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-32">Vagas</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-16"></th>
@@ -68,7 +70,9 @@ export default function Vagas() {
                 <tr key={v.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
                   <td className="px-4 py-2.5">
                     <div className="text-sm font-medium text-text1">{v.disciplina}</div>
-                    <div className="text-xs text-text3">{v.professor}</div>
+                  </td>
+                  <td className="px-4 py-2.5 text-sm font-medium text-gold-light">
+                    {v.professor}
                   </td>
                   <td className="px-4 py-2.5 text-sm text-text2">
                     {v.departamento?.nome}
@@ -119,7 +123,7 @@ export default function Vagas() {
 function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
   const [form, setForm] = useState({
     disciplina: '', professor: '', departamentoId: '',
-    qtdBolsistas: '1', qtdVoluntarios: '2', qtdListaEspera: '1',
+    qtdBolsistas: '1', qtdVoluntarios: '2',
   })
   const [turmasSelecionadas, setTurmasSelecionadas] = useState([])
 
@@ -143,12 +147,6 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
 
     const bols = parseInt(form.qtdBolsistas) || 0
     const vol = parseInt(form.qtdVoluntarios) || 0
-    const esp = parseInt(form.qtdListaEspera) || 0
-
-    if (bols + vol + esp === 0) {
-      alert('A vaga precisa ter ao menos uma posição (bolsista, voluntário ou espera).')
-      return
-    }
 
     onSalvar({
       disciplina: form.disciplina.trim(),
@@ -156,7 +154,7 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
       departamentoId: form.departamentoId,
       qtdBolsistas: bols,
       qtdVoluntarios: vol,
-      qtdListaEspera: esp,
+      qtdListaEspera: 1, // fixo — sempre 1 vaga de lista de espera
       turmasIds: turmasSelecionadas,
     })
   }
@@ -192,7 +190,7 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
           </div>
 
           <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2 mt-4">Quantidade de posições</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">Bolsistas</label>
               <input type="text" inputMode="numeric" className="field" value={form.qtdBolsistas} onChange={(e) => set('qtdBolsistas', e.target.value.replace(/\D/g, ''))} />
@@ -201,13 +199,23 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
               <label className="field-label">Voluntários</label>
               <input type="text" inputMode="numeric" className="field" value={form.qtdVoluntarios} onChange={(e) => set('qtdVoluntarios', e.target.value.replace(/\D/g, ''))} />
             </div>
-            <div>
-              <label className="field-label">Lista de espera</label>
-              <input type="text" inputMode="numeric" className="field" value={form.qtdListaEspera} onChange={(e) => set('qtdListaEspera', e.target.value.replace(/\D/g, ''))} />
-            </div>
           </div>
+          <p className="text-[11px] text-text3 mt-1">A lista de espera é fixa em 1 vaga.</p>
 
-          <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium mb-2 mt-4">Turmas que podem se candidatar</p>
+          <div className="flex items-center justify-between mb-2 mt-4">
+            <p className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">Turmas que podem se candidatar</p>
+            {turmas.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setTurmasSelecionadas(
+                  turmasSelecionadas.length === turmas.length ? [] : turmas.map((t) => t.id)
+                )}
+                className="text-xs text-gold hover:text-gold-light font-medium"
+              >
+                {turmasSelecionadas.length === turmas.length ? 'Desmarcar todas' : 'Selecionar todas'}
+              </button>
+            )}
+          </div>
           {turmas.length === 0 ? (
             <p className="text-xs text-text3">Cadastre turmas primeiro.</p>
           ) : (

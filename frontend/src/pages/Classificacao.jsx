@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useVagas, useDepartamentos, useClassificacoesPorVagas, useResolverEmpate } from '../hooks/useApi'
+import { useAuth } from '../contexts/AuthContext'
 import { fmtNota, tipoBadge } from '../lib/formato'
 
 export default function Classificacao() {
+  const { usuario } = useAuth()
+  const ehAdmin = usuario?.perfil === 'ADMIN'
   const { data: vagas, isLoading: carregandoVagas } = useVagas()
   const { data: departamentos } = useDepartamentos()
   const [departamentoId, setDepartamentoId] = useState('')
@@ -56,6 +59,7 @@ export default function Classificacao() {
               vaga={vaga}
               classificacao={resultados[i]?.data}
               isLoading={resultados[i]?.isLoading}
+              ehAdmin={ehAdmin}
             />
           ))}
         </div>
@@ -65,7 +69,7 @@ export default function Classificacao() {
 }
 
 // ─── Card de uma vaga com sua tabela de classificação ────
-function VagaCard({ vaga, classificacao, isLoading }) {
+function VagaCard({ vaga, classificacao, isLoading, ehAdmin }) {
   const [modalEmpate, setModalEmpate] = useState(false)
 
   const empatados = classificacao?.filter(c => c.empate) || []
@@ -91,8 +95,9 @@ function VagaCard({ vaga, classificacao, isLoading }) {
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
           <p className="text-sm font-semibold text-text1">{vaga.disciplina}</p>
+          <p className="text-sm font-medium text-gold-light mt-0.5">Prof. {vaga.professor}</p>
           <p className="text-xs text-text2 mt-0.5">
-            Prof. {vaga.professor} · {vaga.qtdBolsistas} bolsistas · {vaga.qtdVoluntarios} voluntários · {vaga.qtdListaEspera} em espera
+            {vaga.qtdBolsistas} bolsistas · {vaga.qtdVoluntarios} voluntários · {vaga.qtdListaEspera} em espera
           </p>
         </div>
 
@@ -106,6 +111,7 @@ function VagaCard({ vaga, classificacao, isLoading }) {
               <tr className="border-b border-border">
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-14">Pos.</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Estudante</th>
+                {ehAdmin && <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Nome fantasia</th>}
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-36">Pontuação</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-32">Resultado</th>
               </tr>
@@ -127,6 +133,7 @@ function VagaCard({ vaga, classificacao, isLoading }) {
                       <div className="text-sm font-medium text-text1">{c.nome || c.nomeFantasia}</div>
                       {c.nome && <div className="text-xs text-text3">{c.nomeFantasia}</div>}
                     </td>
+                    {ehAdmin && <td className="px-4 py-2.5 text-sm text-text2">{c.nomeFantasia}</td>}
                     <td className="px-4 py-2.5 text-sm font-medium tabular-nums text-text1 font-mono">{fmtNota(c.pontuacao)}</td>
                     <td className="px-4 py-2.5"><span className={`badge ${badge.classe}`}>{badge.texto}</span></td>
                   </tr>
