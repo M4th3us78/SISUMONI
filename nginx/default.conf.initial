@@ -1,0 +1,34 @@
+# Config de BOOTSTRAP — só HTTP, usada antes de existir certificado.
+# Depois de conseguir o certificado com o Certbot, troque pra
+# default.conf.ssl (veja DEPLOY.md) e rode `docker compose restart nginx`.
+
+server {
+    listen 80;
+    server_name seu-dominio.com.br;
+
+    # Desafio HTTP-01 do Let's Encrypt
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location /api/ {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /actuator/health {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+    }
+
+    location / {
+        proxy_pass http://frontend:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

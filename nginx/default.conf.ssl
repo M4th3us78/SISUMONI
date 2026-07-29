@@ -1,0 +1,51 @@
+# Config FINAL — HTTPS com o certificado do Let's Encrypt.
+# Só troque pra esta depois que o Certbot já tiver emitido o certificado
+# de verdade (veja DEPLOY.md). Antes disso o Nginx nem sobe, porque os
+# arquivos de certificado ainda não existem.
+
+server {
+    listen 80;
+    server_name seu-dominio.com.br;
+
+    # Mantém o desafio HTTP-01 funcionando em HTTP mesmo depois do corte
+    # pra HTTPS — necessário pra renovação automática continuar funcionando.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name seu-dominio.com.br;
+
+    ssl_certificate     /etc/letsencrypt/live/seu-dominio.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/seu-dominio.com.br/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    location /api/ {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /actuator/health {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+    }
+
+    location / {
+        proxy_pass http://frontend:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
