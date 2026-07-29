@@ -29,6 +29,10 @@ node_modules/
 *.properties.local
 env.local
 
+# Segredos de produção — nunca commitar
+.env*
+!.env*.example
+
 # Logs
 /logs
 *.log
