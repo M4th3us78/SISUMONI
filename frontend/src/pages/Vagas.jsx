@@ -89,7 +89,7 @@ export default function Vagas() {
                           })
                         }
                       }}
-                      className="text-xs text-danger hover:text-danger/80"
+                      className="btn-chip btn-chip-danger"
                     >
                       Remover
                     </button>

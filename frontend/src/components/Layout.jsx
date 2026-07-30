@@ -1,8 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import logoCompleta from '../assets/MONI (7).png'
 
 export default function Layout({ children }) {
   const { usuario, logout } = useAuth()
+  const { tema, alternarTema } = useTheme()
   const ehAdmin = usuario?.perfil === 'ADMIN'
 
   const linkClasse = ({ isActive }) =>
@@ -14,10 +17,8 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen bg-bg">
-      <header className="h-13 bg-surface border-b border-border flex items-center justify-between px-5 sticky top-0 z-20" style={{ height: 52 }}>
-        <span className="text-[15px] font-display font-bold">
-          SISU<span className="text-gold">MONI</span>
-        </span>
+      <header className="bg-surface border-b border-border flex items-center justify-between px-5 sticky top-0 z-20" style={{ height: 72 }}>
+        <img src={logoCompleta} alt="SisuMoni" className="h-14 w-auto" />
         <div className="flex items-center gap-3 text-sm text-text2">
           {ehAdmin && (
             <span className="badge badge-gold">
@@ -25,13 +26,16 @@ export default function Layout({ children }) {
             </span>
           )}
           <span>{usuario?.nome}</span>
-          <button onClick={logout} className="text-text3 hover:text-text1">
+          <button onClick={alternarTema} className="btn-chip btn-chip-neutral">
+            {tema === 'dark' ? 'Tema claro' : 'Tema escuro'}
+          </button>
+          <button onClick={logout} className="btn-chip btn-chip-neutral">
             Sair
           </button>
         </div>
       </header>
 
-      <div className="grid" style={{ gridTemplateColumns: '196px 1fr', minHeight: 'calc(100vh - 52px)' }}>
+      <div className="grid" style={{ gridTemplateColumns: '196px 1fr', minHeight: 'calc(100vh - 72px)' }}>
         <nav className="bg-surface border-r border-border p-3 flex flex-col gap-1">
           <p className="text-[10px] uppercase tracking-wider text-text3 px-3 pt-2 pb-1">
             Período 2026.1

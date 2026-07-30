@@ -19,6 +19,15 @@ export default function Estudantes() {
 
   const [modalEstudante, setModalEstudante] = useState(null)
   const [turmaId, setTurmaId] = useState('')
+  const [expandidos, setExpandidos] = useState(new Set())
+
+  function alternarExpandido(id) {
+    setExpandidos((atual) => {
+      const novo = new Set(atual)
+      novo.has(id) ? novo.delete(id) : novo.add(id)
+      return novo
+    })
+  }
 
   const estudantesFiltrados = useMemo(
     () => (estudantes?.filter(e => !turmaId || e.turma.id === turmaId) ?? [])
@@ -93,141 +102,99 @@ export default function Estudantes() {
           </p>
         </div>
       ) : (
-        <>
-          {/* Tabela — telas lg+ */}
-          <div className="card overflow-hidden overflow-x-auto hidden lg:block">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  {[
-                    'Nome', 'Nome fantasia', 'IRA',
-                    '1ª opção', 'Média', 'Pontuação', 'Situação',
-                    '2ª opção', 'Média', 'Pontuação', 'Situação',
-                    '',
-                  ].map((titulo, i) => (
-                    <th key={i} className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 whitespace-nowrap">
-                      {titulo}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {estudantesFiltrados.map((e) => {
-                  const c1 = e.opcao1 ? mapaClassificacao.get(`${e.opcao1.id}_${e.id}`) : null
-                  const c2 = e.opcao2 ? mapaClassificacao.get(`${e.opcao2.id}_${e.id}`) : null
-                  const badge1 = tipoBadge(c1?.tipo, c1?.empate)
-                  const badge2 = tipoBadge(c2?.tipo, c2?.empate)
+        <div className="flex flex-col gap-2">
+          {estudantesFiltrados.map((e) => {
+            const c1 = e.opcao1 ? mapaClassificacao.get(`${e.opcao1.id}_${e.id}`) : null
+            const c2 = e.opcao2 ? mapaClassificacao.get(`${e.opcao2.id}_${e.id}`) : null
+            const badge1 = tipoBadge(c1?.tipo, c1?.empate)
+            const badge2 = tipoBadge(c2?.tipo, c2?.empate)
+            const aberto = expandidos.has(e.id)
 
-                  return (
-                    <tr key={e.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
-                      <td className="px-4 py-2.5">
-                        <div className="text-sm font-medium text-text1">{e.nome}</div>
-                      </td>
-                      <td className="px-4 py-2.5 text-sm font-medium text-gold-light whitespace-nowrap">{e.nomeFantasia}</td>
-                      <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono whitespace-nowrap">{fmtNota(e.ira)}</td>
+            // Vaga em que o estudante está classificado (bolsista, voluntário ou lista de espera), se houver
+            const statusAtivo =
+              c1?.tipo ? { vaga: e.opcao1, badge: badge1 } :
+              c2?.tipo ? { vaga: e.opcao2, badge: badge2 } :
+              null
 
-                      <td className="px-4 py-2.5 text-sm text-text1 whitespace-nowrap">{e.opcao1?.disciplina ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-sm tabular-nums text-text2 font-mono whitespace-nowrap">{fmtNota(e.mediaOpcao1)}</td>
-                      <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono whitespace-nowrap">{fmtNota(c1?.pontuacao)}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        {e.opcao1 ? <span className={`badge ${badge1.classe}`}>{badge1.texto}</span> : '—'}
-                      </td>
-
-                      <td className="px-4 py-2.5 text-sm text-text1 whitespace-nowrap">{e.opcao2?.disciplina ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-sm tabular-nums text-text2 font-mono whitespace-nowrap">{fmtNota(e.mediaOpcao2)}</td>
-                      <td className="px-4 py-2.5 text-sm tabular-nums text-text1 font-mono whitespace-nowrap">{fmtNota(c2?.pontuacao)}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        {e.opcao2 ? <span className={`badge ${badge2.classe}`}>{badge2.texto}</span> : '—'}
-                      </td>
-
-                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                        <button
-                          onClick={() => setModalEstudante(e)}
-                          className="text-xs text-accent hover:text-accent-light mr-3"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Remover ${e.nome}?`)) deletar.mutate(e.id)
-                          }}
-                          className="text-xs text-danger hover:text-danger/80"
-                        >
-                          Remover
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Cards — telas menores que lg */}
-          <div className="flex flex-col gap-3 lg:hidden">
-            {estudantesFiltrados.map((e) => {
-              const c1 = e.opcao1 ? mapaClassificacao.get(`${e.opcao1.id}_${e.id}`) : null
-              const c2 = e.opcao2 ? mapaClassificacao.get(`${e.opcao2.id}_${e.id}`) : null
-              const badge1 = tipoBadge(c1?.tipo, c1?.empate)
-              const badge2 = tipoBadge(c2?.tipo, c2?.empate)
-
-              return (
-                <div key={e.id} className="card p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-medium text-text1">{e.nome}</div>
-                      <div className="text-sm font-medium text-gold-light">{e.nomeFantasia}</div>
+            return (
+              <div key={e.id} className="card overflow-hidden">
+                <div
+                  onClick={() => alternarExpandido(e.id)}
+                  className="p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-surface2"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`text-text3 text-xs shrink-0 transition-transform ${aberto ? 'rotate-90' : ''}`}>▸</span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-text1 truncate">{e.nome}</div>
+                      <div className="text-sm font-medium text-gold-light truncate">{e.nomeFantasia}</div>
                     </div>
-                    <div className="text-xs text-text2 tabular-nums font-mono whitespace-nowrap">IRA {fmtNota(e.ira)}</div>
                   </div>
-
-                  <div className="mt-3 pt-3 border-t border-border2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">1ª opção</span>
-                      {e.opcao1 ? <span className={`badge ${badge1.classe}`}>{badge1.texto}</span> : '—'}
-                    </div>
-                    <div className="text-sm text-text1 mt-0.5">{e.opcao1?.disciplina ?? '—'}</div>
-                    {e.opcao1 && (
-                      <div className="text-xs text-text2 tabular-nums font-mono mt-0.5">
-                        Média {fmtNota(e.mediaOpcao1)} · Pontuação {fmtNota(c1?.pontuacao)}
-                      </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {statusAtivo && (
+                      <>
+                        <span className="text-sm text-text2 hidden sm:inline">
+                          {statusAtivo.vaga.disciplina} <span className="text-text3">— Prof. {statusAtivo.vaga.professor}</span>
+                        </span>
+                        <span className={`badge ${statusAtivo.badge.classe}`}>{statusAtivo.badge.texto}</span>
+                      </>
                     )}
-                  </div>
-
-                  {e.opcao2 && (
-                    <div className="mt-3 pt-3 border-t border-border2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">2ª opção</span>
-                        <span className={`badge ${badge2.classe}`}>{badge2.texto}</span>
-                      </div>
-                      <div className="text-sm text-text1 mt-0.5">{e.opcao2.disciplina}</div>
-                      <div className="text-xs text-text2 tabular-nums font-mono mt-0.5">
-                        Média {fmtNota(e.mediaOpcao2)} · Pontuação {fmtNota(c2?.pontuacao)}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-3 pt-3 border-t border-border2 flex justify-end gap-3">
                     <button
-                      onClick={() => setModalEstudante(e)}
-                      className="text-xs text-accent hover:text-accent-light"
+                      onClick={(ev) => { ev.stopPropagation(); setModalEstudante(e) }}
+                      className="btn-chip btn-chip-accent"
                     >
                       Editar
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={(ev) => {
+                        ev.stopPropagation()
                         if (confirm(`Remover ${e.nome}?`)) deletar.mutate(e.id)
                       }}
-                      className="text-xs text-danger hover:text-danger/80"
+                      className="btn-chip btn-chip-danger"
                     >
                       Remover
                     </button>
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        </>
+
+                {aberto && (
+                  <div className="px-4 pb-4">
+                    <div className="text-xs text-text2 tabular-nums font-mono mb-3">IRA {fmtNota(e.ira)}</div>
+
+                    <div className="pt-3 border-t border-border2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">1ª opção</span>
+                        {e.opcao1 ? <span className={`badge ${badge1.classe}`}>{badge1.texto}</span> : '—'}
+                      </div>
+                      <div className="text-sm text-text1 mt-0.5">{e.opcao1?.disciplina ?? '—'}</div>
+                      {e.opcao1 && (
+                        <>
+                          <div className="text-xs text-text3">Prof. {e.opcao1.professor}</div>
+                          <div className="text-xs text-text2 tabular-nums font-mono mt-0.5">
+                            Média {fmtNota(e.mediaOpcao1)} · Pontuação {fmtNota(c1?.pontuacao)}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {e.opcao2 && (
+                      <div className="mt-3 pt-3 border-t border-border2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">2ª opção</span>
+                          <span className={`badge ${badge2.classe}`}>{badge2.texto}</span>
+                        </div>
+                        <div className="text-sm text-text1 mt-0.5">{e.opcao2.disciplina}</div>
+                        <div className="text-xs text-text3">Prof. {e.opcao2.professor}</div>
+                        <div className="text-xs text-text2 tabular-nums font-mono mt-0.5">
+                          Média {fmtNota(e.mediaOpcao2)} · Pontuação {fmtNota(c2?.pontuacao)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {modalEstudante !== null && (

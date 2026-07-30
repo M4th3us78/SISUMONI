@@ -37,5 +37,6 @@ export const estudantesApi = {
 export const operadoresApi = {
   listar: () => api.get('/operadores').then(r => r.data),
   criar: (dados) => api.post('/operadores', dados).then(r => r.data),
+  atualizar: (id, dados) => api.put(`/operadores/${id}`, dados).then(r => r.data),
   deletar: (id) => api.delete(`/operadores/${id}`),
 }

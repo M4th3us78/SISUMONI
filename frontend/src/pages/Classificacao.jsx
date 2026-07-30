@@ -11,7 +11,8 @@ export default function Classificacao() {
   const [departamentoId, setDepartamentoId] = useState('')
 
   const vagasFiltradas = useMemo(
-    () => vagas?.filter(v => !departamentoId || v.departamento.id === departamentoId) ?? [],
+    () => (vagas?.filter(v => !departamentoId || v.departamento.id === departamentoId) ?? [])
+      .sort((a, b) => a.disciplina.localeCompare(b.disciplina, 'pt-BR')),
     [vagas, departamentoId]
   )
   const vagaIds = useMemo(() => vagasFiltradas.map(v => v.id), [vagasFiltradas])
@@ -131,7 +132,6 @@ function VagaCard({ vaga, classificacao, isLoading, ehAdmin }) {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="text-sm font-medium text-text1">{c.nome || c.nomeFantasia}</div>
-                      {c.nome && <div className="text-xs text-text3">{c.nomeFantasia}</div>}
                     </td>
                     {ehAdmin && <td className="px-4 py-2.5 text-sm text-text2">{c.nomeFantasia}</td>}
                     <td className="px-4 py-2.5 text-sm font-medium tabular-nums text-text1 font-mono">{fmtNota(c.pontuacao)}</td>

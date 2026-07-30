@@ -35,10 +35,42 @@
   --radius-card-lg: 16px;
 }
 
+:root[data-theme="light"] {
+  --color-bg: #F3EFE5;
+  --color-surface: #FFFFFF;
+  --color-surface2: #EAE4D5;
+  --color-surface3: #DCD3BC;
+  --color-border: #D6CDB6;
+  --color-border2: #C2B696;
+
+  --color-gold: #9C7830;
+  --color-gold-dim: #F6E8C6;
+  --color-gold-light: #7A5B1C;
+
+  --color-accent: #1D4ED8;
+  --color-accent-light: #1739A6;
+  --color-accent-dim: #DCE8FD;
+
+  --color-success: #047857;
+  --color-success-dim: #D3F3E4;
+  --color-warning: #9A4508;
+  --color-warning-dim: #FBE7C7;
+  --color-danger: #B91C1C;
+  --color-danger-dim: #FBDADA;
+
+  --color-text1: #14181F;
+  --color-text2: #3D4C63;
+  --color-text3: #5A6B82;
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text1);
+}
+
+button:not(:disabled) {
+  cursor: pointer;
 }
 
 @layer components {
@@ -68,4 +100,12 @@ body {
   .field-label {
     @apply text-[11px] font-mono uppercase tracking-wider text-text2 mb-1 block;
   }
+
+  .btn-chip {
+    @apply inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium
+           border transition-colors whitespace-nowrap;
+  }
+  .btn-chip-neutral { @apply border-border2   text-text2       hover:bg-surface2 hover:text-text1; }
+  .btn-chip-accent  { @apply border-accent/30 text-accent-light hover:bg-accent-dim; }
+  .btn-chip-danger  { @apply border-danger/30 text-danger       hover:bg-danger-dim; }
 }

@@ -149,7 +149,7 @@ function CrudSimples({ itens, isLoading, nome, setNome, onAdicionar, salvando, o
                 <span className="text-sm text-text1">{item.nome}</span>
                 <button
                   onClick={() => onDeletar(item.id, item.nome)}
-                  className="text-xs text-danger hover:text-danger/80"
+                  className="btn-chip btn-chip-danger"
                 >
                   Remover
                 </button>

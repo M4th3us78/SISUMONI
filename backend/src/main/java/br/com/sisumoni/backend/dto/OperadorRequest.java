@@ -1,8 +1,9 @@
 package br.com.sisumoni.backend.dto;
 
+import br.com.sisumoni.backend.domain.Usuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Set;
 import java.util.UUID;
@@ -20,6 +21,8 @@ public record OperadorRequest(
     @NotBlank(message = "A senha é obrigatória")
     String senha,
 
-    @NotEmpty(message = "Selecione ao menos uma Turma")
-    Set<UUID> turmasIds 
+    @NotNull(message = "O perfil é obrigatório")
+    Usuario.Perfil perfil,
+
+    Set<UUID> turmasIds
 ){}
