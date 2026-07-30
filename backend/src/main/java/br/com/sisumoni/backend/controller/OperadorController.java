@@ -1,5 +1,6 @@
 package br.com.sisumoni.backend.controller;
 
+import br.com.sisumoni.backend.dto.OperadorAtualizacaoRequest;
 import br.com.sisumoni.backend.dto.OperadorRequest;
 import br.com.sisumoni.backend.dto.OperadorResponse;
 import br.com.sisumoni.backend.service.OperadorService;
@@ -33,6 +34,12 @@ public class OperadorController {
             @Valid @RequestBody OperadorRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(operadorService.cadastrar(request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<OperadorResponse> atualizar(
+            @PathVariable UUID id, @Valid @RequestBody OperadorAtualizacaoRequest request) {
+        return ResponseEntity.ok(operadorService.atualizar(id, request));
     }
 
     @DeleteMapping("/{id}")

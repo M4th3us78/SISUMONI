@@ -2,6 +2,7 @@ package br.com.sisumoni.backend.service;
 
 import br.com.sisumoni.backend.domain.Turma;
 import br.com.sisumoni.backend.domain.Usuario;
+import br.com.sisumoni.backend.dto.OperadorAtualizacaoRequest;
 import br.com.sisumoni.backend.dto.OperadorRequest;
 import br.com.sisumoni.backend.dto.OperadorResponse;
 import br.com.sisumoni.backend.exception.RecursoNaoEncontradoException;
@@ -34,36 +35,46 @@ public class OperadorService {
 
     @Transactional(readOnly = true)
     public List<OperadorResponse> listar() {
-        return usuarioRepository.findByPerfil(Usuario.Perfil.OPERADOR)
+        return usuarioRepository.findAll()
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    @Transactional
     public OperadorResponse cadastrar(OperadorRequest request) {
         if (usuarioRepository.findByEmail(request.email()).isPresent()) {
             throw new RegraDeNegocioException(
                     "Já existe um usuário com o e-mail: " + request.email());
         }
 
-        Set<Turma> turmas = new HashSet<>();
-        for (UUID turmaId : request.turmasIds()) {
-            Turma turma = turmaRepository.findById(turmaId)
-                    .orElseThrow(() -> new RecursoNaoEncontradoException(
-                            "Turma não encontrada com id: " + turmaId));
-            turmas.add(turma);
-        }
+        Set<Turma> turmas = resolverTurmas(request.perfil(), request.turmasIds());
 
         Usuario operador = Usuario.builder()
                 .nome(request.nome())
                 .email(request.email())
                 .senhaHash(passwordEncoder.encode(request.senha()))
-                .perfil(Usuario.Perfil.OPERADOR)
+                .perfil(request.perfil())
                 .ativo(true)
                 .build();
         operador.setTurmas(turmas);
 
         return toResponse(usuarioRepository.save(operador));
+    }
+
+    @Transactional
+    public OperadorResponse atualizar(UUID id, OperadorAtualizacaoRequest request) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Usuário não encontrado com id: " + id));
+
+        usuario.setNome(request.nome());
+
+        if (usuario.getPerfil() == Usuario.Perfil.OPERADOR) {
+            usuario.setTurmas(resolverTurmas(Usuario.Perfil.OPERADOR, request.turmasIds()));
+        }
+
+        return toResponse(usuarioRepository.save(usuario));
     }
 
     public void deletar(UUID id) {
@@ -79,11 +90,30 @@ public class OperadorService {
         usuarioRepository.delete(operador);
     }
 
+    private Set<Turma> resolverTurmas(Usuario.Perfil perfil, Set<UUID> turmasIds) {
+        if (perfil == Usuario.Perfil.ADMIN) {
+            return new HashSet<>();
+        }
+
+        if (turmasIds == null || turmasIds.isEmpty()) {
+            throw new RegraDeNegocioException("Selecione ao menos uma turma");
+        }
+
+        Set<Turma> turmas = new HashSet<>();
+        for (UUID turmaId : turmasIds) {
+            Turma turma = turmaRepository.findById(turmaId)
+                    .orElseThrow(() -> new RecursoNaoEncontradoException(
+                            "Turma não encontrada com id: " + turmaId));
+            turmas.add(turma);
+        }
+        return turmas;
+    }
+
     private OperadorResponse toResponse(Usuario u) {
-        List<String> nomesTurmas = u.getTurmas().stream()
-                .map(Turma::getNome)
+        List<OperadorResponse.TurmaResumo> turmas = u.getTurmas().stream()
+                .map(t -> new OperadorResponse.TurmaResumo(t.getId(), t.getNome()))
                 .toList();
         return new OperadorResponse(
-                u.getId(), u.getNome(), u.getEmail(), u.isAtivo(), nomesTurmas);
+                u.getId(), u.getNome(), u.getEmail(), u.isAtivo(), u.getPerfil().name(), turmas);
     }
 }

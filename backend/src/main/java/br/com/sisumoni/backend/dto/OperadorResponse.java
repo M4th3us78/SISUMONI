@@ -8,5 +8,8 @@ public record OperadorResponse(
         String nome,
         String email,
         boolean ativo,
-        List<String> turmas
-) {}
+        String perfil,
+        List<TurmaResumo> turmas
+) {
+    public record TurmaResumo(UUID id, String nome) {}
+}

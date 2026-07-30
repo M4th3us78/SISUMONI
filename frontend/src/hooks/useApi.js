@@ -125,6 +125,13 @@ export function useCriarOperador() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['operadores'] }),
   })
 }
+export function useAtualizarOperador() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, dados }) => operadoresApi.atualizar(id, dados),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['operadores'] }),
+  })
+}
 export function useDeletarOperador() {
   const qc = useQueryClient()
   return useMutation({

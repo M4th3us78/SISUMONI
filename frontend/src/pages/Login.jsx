@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import logoCompleta from '../assets/MONI (7).png'
 
 export default function Login() {
   const { login } = useAuth()
@@ -26,9 +27,7 @@ export default function Login() {
       <div className="card p-8 w-full max-w-sm">
 
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-display font-bold text-text1">
-            SISU<span className="text-gold">MONI</span>
-          </h1>
+          <img src={logoCompleta} alt="SisuMoni" className="h-20 w-auto mx-auto" />
           <p className="text-sm text-text2 mt-1">Sistema de Monitoria — K0</p>
         </div>
 
