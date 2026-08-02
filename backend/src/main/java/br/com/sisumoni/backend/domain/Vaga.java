@@ -40,6 +40,9 @@ public class Vaga {
     )
     private Set<Turma> turmas = new HashSet<>();
 
+    @Column(nullable = false)
+    private boolean alertaChoqueHorario;
+
     public Vaga() {}
 
     public UUID getId() { return id; }
@@ -58,4 +61,6 @@ public class Vaga {
     public void setQtdListaEspera(int qtdListaEspera) { this.qtdListaEspera = qtdListaEspera; }
     public Set<Turma> getTurmas() { return turmas; }
     public void setTurmas(Set<Turma> turmas) { this.turmas = turmas; }
+    public boolean isAlertaChoqueHorario() { return alertaChoqueHorario; }
+    public void setAlertaChoqueHorario(boolean alertaChoqueHorario) { this.alertaChoqueHorario = alertaChoqueHorario; }
 }

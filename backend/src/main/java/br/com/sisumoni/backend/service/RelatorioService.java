@@ -47,6 +47,8 @@ public class RelatorioService {
     private static final Color COR_VOLUNTARIO_BG = new Color(0xDC, 0xE8, 0xFD);
     private static final Color COR_LISTA_ESPERA = new Color(0x5B, 0x6B, 0x85);
     private static final Color COR_LISTA_ESPERA_BG = new Color(0xF2, 0xEF, 0xE7);
+    private static final Color COR_ALERTA = new Color(0xB9, 0x1C, 0x1C);
+    private static final Font FONTE_ALERTA = new Font(Font.HELVETICA, 10, Font.BOLD, COR_ALERTA);
 
     private final VagaRepository vagaRepository;
     private final ClassificacaoRepository classificacaoRepository;
@@ -147,6 +149,12 @@ public class RelatorioService {
         tituloVaga.setSpacingBefore(8);
         tituloVaga.setSpacingAfter(4);
         documento.add(tituloVaga);
+
+        if (vaga.isAlertaChoqueHorario()) {
+            Paragraph alerta = new Paragraph("ATENÇÃO! Verifique choque de horário", FONTE_ALERTA);
+            alerta.setSpacingAfter(4);
+            documento.add(alerta);
+        }
 
         List<Classificacao> classificacoes = classificacaoRepository.findByVagaIdComEstudante(vaga.getId());
         if (classificacoes.isEmpty()) {

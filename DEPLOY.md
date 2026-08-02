@@ -31,6 +31,12 @@ Edite `.env.production` e preencha:
 - `SPRING_MAIL_*` — credenciais do provedor de e-mail (recuperação de senha).
 - `DOMAIN` e `CERTBOT_EMAIL` — o domínio real e um e-mail seu (o Let's Encrypt usa pra avisar sobre expiração de certificado).
 
+Crie também um link simbólico `.env` apontando pro `.env.production`:
+```bash
+ln -s .env.production .env
+```
+Isso é necessário porque o `docker-compose.prod.yml` usa variáveis tipo `${SPRING_DATASOURCE_USERNAME}` diretamente no YAML (pra montar `POSTGRES_USER`/`POSTGRES_PASSWORD` e o healthcheck do Postgres) — essas substituições só são resolvidas pelo Compose CLI a partir de um arquivo chamado exatamente `.env`, não `.env.production`. Sem o link, essas variáveis ficam em branco (aparecem avisos como `The "SPRING_DATASOURCE_USERNAME" variable is not set`) e o container do Postgres sobe sem usuário/senha válidos, falhando no healthcheck (`dependency failed to start: container ... is unhealthy`).
+
 ## 2. Buildar as imagens
 
 ```bash
