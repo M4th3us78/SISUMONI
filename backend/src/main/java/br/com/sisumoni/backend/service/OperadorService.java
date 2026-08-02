@@ -56,6 +56,7 @@ public class OperadorService {
                 .senhaHash(passwordEncoder.encode(request.senha()))
                 .perfil(request.perfil())
                 .ativo(true)
+                .senhaProvisoria(true)
                 .build();
         operador.setTurmas(turmas);
 

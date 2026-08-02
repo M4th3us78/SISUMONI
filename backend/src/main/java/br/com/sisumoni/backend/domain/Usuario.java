@@ -38,6 +38,9 @@ public class Usuario implements UserDetails {
     @Column(nullable = false)
     private boolean ativo = true;
 
+    @Column(name = "senha_provisoria", nullable = false)
+    private boolean senhaProvisoria = false;
+
     public enum Perfil {
         ADMIN, OPERADOR
     }
@@ -63,6 +66,11 @@ public class Usuario implements UserDetails {
         this.ativo = ativo;
     }
 
+    public Usuario(UUID id, String nome, String email, String senhaHash, Perfil perfil, boolean ativo, boolean senhaProvisoria) {
+        this(id, nome, email, senhaHash, perfil, ativo);
+        this.senhaProvisoria = senhaProvisoria;
+    }
+
     // ── Getters e Setters ─────────────────────────────────────────
 
     public UUID getId() { return id; }
@@ -83,6 +91,9 @@ public class Usuario implements UserDetails {
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
 
+    public boolean isSenhaProvisoria() { return senhaProvisoria; }
+    public void setSenhaProvisoria(boolean senhaProvisoria) { this.senhaProvisoria = senhaProvisoria; }
+
     public Set<Turma> getTurmas() { return turmas; }
     public void setTurmas(Set<Turma> turmas) { this.turmas = turmas; }
 
@@ -97,6 +108,7 @@ public class Usuario implements UserDetails {
         private String senhaHash;
         private Perfil perfil;
         private boolean ativo = true;
+        private boolean senhaProvisoria = false;
 
         public Builder id(UUID id) { this.id = id; return this; }
         public Builder nome(String nome) { this.nome = nome; return this; }
@@ -104,9 +116,10 @@ public class Usuario implements UserDetails {
         public Builder senhaHash(String senhaHash) { this.senhaHash = senhaHash; return this; }
         public Builder perfil(Perfil perfil) { this.perfil = perfil; return this; }
         public Builder ativo(boolean ativo) { this.ativo = ativo; return this; }
+        public Builder senhaProvisoria(boolean senhaProvisoria) { this.senhaProvisoria = senhaProvisoria; return this; }
 
         public Usuario build() {
-            return new Usuario(id, nome, email, senhaHash, perfil, ativo);
+            return new Usuario(id, nome, email, senhaHash, perfil, ativo, senhaProvisoria);
         }
     }
 

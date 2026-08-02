@@ -1,5 +1,10 @@
 import api from './api'
 
+// ── Autenticação ──────────────────────────────────────────
+export const authApi = {
+  alterarSenha: (dados) => api.put('/auth/senha', dados),
+}
+
 // ── Turmas ──────────────────────────────────────────────
 export const turmasApi = {
   listar: () => api.get('/turmas').then(r => r.data),
