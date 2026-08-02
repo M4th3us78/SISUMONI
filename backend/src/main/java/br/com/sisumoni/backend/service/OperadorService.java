@@ -77,6 +77,7 @@ public class OperadorService {
         return toResponse(usuarioRepository.save(usuario));
     }
 
+    @Transactional
     public void deletar(UUID id) {
         Usuario operador = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
@@ -87,7 +88,11 @@ public class OperadorService {
                     "Não é possível remover um administrador por aqui");
         }
 
-        usuarioRepository.delete(operador);
+        // Desativa em vez de apagar: o operador perde o acesso ao sistema
+        // (login passa a ser negado com "conta inativa"), mas o histórico de
+        // estudantes cadastrados por ele continua íntegro.
+        operador.setAtivo(false);
+        usuarioRepository.save(operador);
     }
 
     private Set<Turma> resolverTurmas(Usuario.Perfil perfil, Set<UUID> turmasIds) {

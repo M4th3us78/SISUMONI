@@ -42,6 +42,7 @@ export default function Operadores() {
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-52">E-mail</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-32">Tipo</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-48">Turmas</th>
+                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-24">Status</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-28"></th>
               </tr>
             </thead>
@@ -64,6 +65,11 @@ export default function Operadores() {
                         : <span className="text-xs text-text3">—</span>}
                     </div>
                   </td>
+                  <td className="px-4 py-2.5">
+                    <span className={`badge ${o.ativo ? 'badge-green' : 'badge-neutral'}`}>
+                      {o.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
                   <td className="px-4 py-2.5 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -72,18 +78,20 @@ export default function Operadores() {
                       >
                         Editar
                       </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Remover o operador ${o.nome}? Ele perderá o acesso ao sistema.`)) {
-                            deletar.mutate(o.id, {
-                              onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao remover'),
-                            })
-                          }
-                        }}
-                        className="btn-chip btn-chip-danger"
-                      >
-                        Remover
-                      </button>
+                      {o.ativo && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Desativar o operador ${o.nome}? Ele perderá o acesso ao sistema.`)) {
+                              deletar.mutate(o.id, {
+                                onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao desativar'),
+                              })
+                            }
+                          }}
+                          className="btn-chip btn-chip-danger"
+                        >
+                          Desativar
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
