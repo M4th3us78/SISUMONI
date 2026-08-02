@@ -53,6 +53,16 @@ export function useCriarVaga() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vagas'] }),
   })
 }
+export function useAtualizarVaga() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, dados }) => vagasApi.atualizar(id, dados),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vagas'] })
+      qc.invalidateQueries({ queryKey: ['classificacao'] })
+    },
+  })
+}
 export function useDeletarVaga() {
   const qc = useQueryClient()
   return useMutation({

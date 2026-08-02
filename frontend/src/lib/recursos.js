@@ -18,6 +18,7 @@ export const departamentosApi = {
 export const vagasApi = {
   listar: () => api.get('/vagas').then(r => r.data),
   criar: (dados) => api.post('/vagas', dados).then(r => r.data),
+  atualizar: (id, dados) => api.put(`/vagas/${id}`, dados).then(r => r.data),
   deletar: (id) => api.delete(`/vagas/${id}`),
   classificacao: (id) => api.get(`/vagas/${id}/classificacao`).then(r => r.data),
   resolverEmpate: (id, dados) =>
