@@ -11,6 +11,7 @@ import br.com.sisumoni.backend.repository.EstudanteRepository;
 import br.com.sisumoni.backend.repository.TurmaRepository;
 import br.com.sisumoni.backend.repository.VagaRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -19,17 +20,21 @@ import java.util.UUID;
 
 @Service
 public class VagaService {
-    
+
     private final VagaRepository vagaRepository;
     private final DepartamentoRepository departamentoRepository;
     private final TurmaRepository turmaRepository;
     private final EstudanteRepository estudanteRepository;
+    private final ClassificacaoService classificacaoService;
 
-    public VagaService(VagaRepository vagaRepository, DepartamentoRepository departamentoRepository, TurmaRepository turmaRepository, EstudanteRepository estudanteRepository) {
+    public VagaService(VagaRepository vagaRepository, DepartamentoRepository departamentoRepository,
+                        TurmaRepository turmaRepository, EstudanteRepository estudanteRepository,
+                        ClassificacaoService classificacaoService) {
         this.vagaRepository = vagaRepository;
         this.departamentoRepository = departamentoRepository;
         this.turmaRepository = turmaRepository;
         this.estudanteRepository = estudanteRepository;
+        this.classificacaoService = classificacaoService;
     }
 
     public List<Vaga> listar() {
@@ -64,6 +69,39 @@ public class VagaService {
         vaga.setTurmas(turmas);
 
         return vagaRepository.save(vaga);
+    }
+
+    @Transactional
+    public Vaga atualizar(UUID id, VagaRequest request) {
+        Vaga vaga = buscarPorId(id);
+
+        var departamento = departamentoRepository.findById(request.departamentoId())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Departamento não encontrado com o ID: " + request.departamentoId()));
+
+        Set<Turma> turmas = new HashSet<>();
+        if (request.turmasIds() != null) {
+            for (UUID turmaId : request.turmasIds()) {
+                Turma turma = turmaRepository.findById(turmaId)
+                        .orElseThrow(() -> new RecursoNaoEncontradoException("Turma não encontrada com o ID: " + turmaId));
+                turmas.add(turma);
+            }
+        }
+
+        vaga.setDisciplina(request.disciplina());
+        vaga.setProfessor(request.professor());
+        vaga.setDepartamento(departamento);
+        vaga.setQtdBolsistas(request.qtdBolsistas());
+        vaga.setQtdVoluntarios(request.qtdVoluntarios());
+        vaga.setQtdListaEspera(request.qtdListaEspera());
+        vaga.setTurmas(turmas);
+
+        Vaga salvo = vagaRepository.save(vaga);
+
+        // Mudanças de capacidade ou turmas elegíveis podem afetar quem já
+        // está classificado nesta vaga
+        classificacaoService.recalcularTudo();
+
+        return salvo;
     }
 
     public void deletar(UUID id) {

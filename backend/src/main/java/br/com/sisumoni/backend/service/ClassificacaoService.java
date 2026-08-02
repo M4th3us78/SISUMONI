@@ -12,15 +12,18 @@ import br.com.sisumoni.backend.repository.ClassificacaoRepository;
 import br.com.sisumoni.backend.repository.EstudanteRepository;
 import br.com.sisumoni.backend.repository.ResolucaoEmpateRepository;
 import br.com.sisumoni.backend.repository.VagaRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +32,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class ClassificacaoService {
+
+    private static final Logger log = LoggerFactory.getLogger(ClassificacaoService.class);
 
     private final ClassificacaoRepository classificacaoRepository;
     private final EstudanteRepository estudanteRepository;
@@ -45,26 +50,31 @@ public class ClassificacaoService {
         this.resolucaoRepository = resolucaoRepository;
     }
 
-    // Qual "balde" de capacidade de uma vaga um tier está preenchendo
-    private enum TipoSlot { PASSANDO, ESPERA }
-
     // ══════════════════════════════════════════════════════════════
     //  RECÁLCULO GLOBAL
     // ══════════════════════════════════════════════════════════════
     /**
-     * Recalcula a classificação de TODAS as vagas de uma vez.
+     * Recalcula a classificação de TODAS as vagas de uma vez, via aceitação
+     * diferida (Gale-Shapley, lado do estudante propondo).
      *
-     * Regra de exclusividade: um estudante só pode estar classificado em
-     * UMA vaga no sistema inteiro, decidida por esta escada de prioridade:
-     *   1) Bolsista/Voluntário na 1ª opção
-     *   2) Bolsista/Voluntário na 2ª opção
-     *   3) Lista de Espera na 1ª opção
-     *   4) Lista de Espera na 2ª opção
-     * Assim que o estudante se classifica em qualquer nível, ele sai da
-     * disputa em tudo mais (inclusive não ocupa lista de espera de duas
-     * vagas ao mesmo tempo). Por isso o cálculo não pode mais ser feito
-     * vaga por vaga isoladamente — o resultado de uma vaga pode liberar ou
-     * ocupar vagas de outra.
+     * Dentro de uma vaga, a disputa pelas posições é sempre só por
+     * pontuação — não importa se o candidato a colocou como 1ª ou 2ª opção.
+     * A ordem de opção só decide, quando um estudante teria nota para
+     * passar em mais de uma vaga ao mesmo tempo, em qual delas ele fica
+     * (a de 1ª opção, liberando a outra pro próximo colocado por nota).
+     *
+     * Como a prioridade Passando > Lista de Espera é igual para todo mundo,
+     * o cálculo se decompõe em duas fases sequenciais e independentes:
+     *   Fase 1 — todos disputam vagas de Passando (bolsista+voluntário).
+     *   Fase 2 — só quem não passou em nenhuma vaga na Fase 1 disputa
+     *            Lista de Espera, do mesmo jeito.
+     * Cada fase roda o mesmo algoritmo genérico ({@link #aceitacaoDiferida}):
+     * cada estudante propõe, em ordem, à vaga da 1ª opção e depois da 2ª; a
+     * vaga sempre reordena por pontuação e devolve à fila quem não couber
+     * mais na capacidade — inclusive alguém que já estava "dentro", se um
+     * proponente melhor aparecer depois. Isso corrige o caso em que um
+     * candidato de 1ª opção com nota menor travava a vaga antes mesmo de um
+     * candidato de 2ª opção com nota maior ser considerado.
      */
     @Transactional
     public void recalcularTudo() {
@@ -74,29 +84,37 @@ public class ClassificacaoService {
         Map<UUID, List<ResolucaoEmpate>> resolucoesPorVaga = resolucaoRepository.findAllComEstudantes().stream()
                 .collect(Collectors.groupingBy(r -> r.getVaga().getId()));
 
-        List<Candidatura> candidaturas1 = new ArrayList<>();
-        List<Candidatura> candidaturas2 = new ArrayList<>();
+        Map<UUID, List<Opcao>> opcoesPorEstudante = new HashMap<>();
+        List<Estudante> candidatos = new ArrayList<>();
         for (Estudante e : estudantes) {
-            if (e.getOpcao1() != null && e.getMediaOpcao1() != null) {
-                candidaturas1.add(new Candidatura(e, e.getOpcao1(), e.getIra().add(e.getMediaOpcao1())));
-            }
-            if (e.getOpcao2() != null && e.getMediaOpcao2() != null) {
-                candidaturas2.add(new Candidatura(e, e.getOpcao2(), e.getIra().add(e.getMediaOpcao2())));
+            List<Opcao> opcoes = opcoesDoEstudante(e);
+            if (!opcoes.isEmpty()) {
+                opcoesPorEstudante.put(e.getId(), opcoes);
+                candidatos.add(e);
             }
         }
 
-        Set<UUID> consumidos = new HashSet<>();
-        Map<UUID, List<Candidato>> resultados = new HashMap<>();
-        for (Vaga v : vagas) resultados.put(v.getId(), new ArrayList<>());
+        // Fase 1 — Passando (bolsista + voluntário)
+        Map<UUID, Integer> capacidadePassando = vagas.stream()
+                .collect(Collectors.toMap(Vaga::getId, v -> v.getQtdBolsistas() + v.getQtdVoluntarios()));
+        Map<UUID, List<Candidato>> passandoPorVaga =
+                aceitacaoDiferida(candidatos, opcoesPorEstudante, capacidadePassando, resolucoesPorVaga);
 
-        // 1º) Bolsista/Voluntário na 1ª opção
-        processarTier(candidaturas1, TipoSlot.PASSANDO, consumidos, resultados, resolucoesPorVaga);
-        // 2º) Bolsista/Voluntário na 2ª opção (só quem sobrou do nível 1)
-        processarTier(candidaturas2, TipoSlot.PASSANDO, consumidos, resultados, resolucoesPorVaga);
-        // 3º) Lista de espera na 1ª opção (só quem sobrou dos níveis 1-2)
-        processarTier(candidaturas1, TipoSlot.ESPERA, consumidos, resultados, resolucoesPorVaga);
-        // 4º) Lista de espera na 2ª opção (só quem sobrou dos níveis 1-3)
-        processarTier(candidaturas2, TipoSlot.ESPERA, consumidos, resultados, resolucoesPorVaga);
+        // Fase 2 — Lista de espera (só quem não passou em nenhuma vaga na fase 1)
+        Set<UUID> seatedNaFase1 = passandoPorVaga.values().stream()
+                .flatMap(List::stream)
+                .map(c -> c.estudante.getId())
+                .collect(Collectors.toSet());
+        List<Estudante> candidatosEspera = candidatos.stream()
+                .filter(e -> !seatedNaFase1.contains(e.getId()))
+                .toList();
+
+        Map<UUID, Integer> capacidadeEspera = vagas.stream()
+                .collect(Collectors.toMap(Vaga::getId, Vaga::getQtdListaEspera));
+        Map<UUID, List<Candidato>> esperaPorVaga =
+                aceitacaoDiferida(candidatosEspera, opcoesPorEstudante, capacidadeEspera, resolucoesPorVaga);
+
+        Map<UUID, List<Candidato>> resultados = montarResultados(vagas, passandoPorVaga, esperaPorVaga, resolucoesPorVaga);
 
         limparResolucoesObsoletas(resultados, resolucoesPorVaga);
 
@@ -106,89 +124,150 @@ public class ClassificacaoService {
     }
 
     /**
-     * Processa um nível da escada de prioridade: para cada vaga, ordena os
-     * candidatos deste tier que ainda não foram consumidos por um nível
-     * anterior e preenche a capacidade que ainda sobrar dessa vaga neste
-     * "balde" (PASSANDO ou ESPERA).
+     * Algoritmo genérico de aceitação diferida para uma fase (Passando ou
+     * Espera): cada estudante em {@code candidatos} propõe, em ordem, às
+     * vagas em {@code opcoesPorEstudante} (1ª opção primeiro, depois a 2ª).
+     * Cada vaga aceita provisoriamente até {@code capacidadePorVaga}
+     * candidatos, sempre ordenados por pontuação — um proponente melhor
+     * pode desalojar quem já estava dentro, que volta pra fila e tenta a
+     * própria próxima opção. Termina quando ninguém mais tem proposta a
+     * fazer (cada estudante propõe no máximo 2 vezes por fase).
      */
-    private void processarTier(List<Candidatura> candidaturas, TipoSlot tipoSlot,
-                                Set<UUID> consumidos,
-                                Map<UUID, List<Candidato>> resultados,
-                                Map<UUID, List<ResolucaoEmpate>> resolucoesPorVaga) {
+    private Map<UUID, List<Candidato>> aceitacaoDiferida(
+            List<Estudante> candidatos,
+            Map<UUID, List<Opcao>> opcoesPorEstudante,
+            Map<UUID, Integer> capacidadePorVaga,
+            Map<UUID, List<ResolucaoEmpate>> resolucoesPorVaga) {
 
-        Map<UUID, List<Candidatura>> porVaga = candidaturas.stream()
-                .filter(c -> !consumidos.contains(c.estudante.getId()))
-                .collect(Collectors.groupingBy(c -> c.vaga.getId()));
+        Map<UUID, List<Candidato>> holds = new HashMap<>();
+        Map<UUID, Integer> proximoIndice = new HashMap<>();
+        Deque<Estudante> livres = new ArrayDeque<>(candidatos);
 
-        for (Map.Entry<UUID, List<Candidatura>> entry : porVaga.entrySet()) {
-            UUID vagaId = entry.getKey();
-            Vaga vaga = entry.getValue().get(0).vaga;
-            List<ResolucaoEmpate> resolucoes = resolucoesPorVaga.getOrDefault(vagaId, List.of());
-            List<Candidato> jaAlocados = resultados.get(vagaId);
+        while (!livres.isEmpty()) {
+            Estudante e = livres.poll();
+            List<Opcao> opcoes = opcoesPorEstudante.get(e.getId());
+            int idx = proximoIndice.getOrDefault(e.getId(), 0);
+            if (idx >= opcoes.size()) {
+                continue; // esgotou as opções nesta fase — fica sem posição
+            }
+            Opcao opcao = opcoes.get(idx);
+            proximoIndice.put(e.getId(), idx + 1);
+
+            Integer capacidade = capacidadePorVaga.get(opcao.vagaId());
+            if (capacidade == null || capacidade <= 0) {
+                continue; // vaga sem capacidade nesta fase
+            }
+
+            List<Candidato> lista = holds.computeIfAbsent(opcao.vagaId(), k -> new ArrayList<>());
+            lista.add(new Candidato(e, opcao.pontuacao()));
+
+            if (lista.size() <= capacidade) {
+                continue;
+            }
+
+            List<ResolucaoEmpate> resolucoes = resolucoesPorVaga.getOrDefault(opcao.vagaId(), List.of());
+            lista.sort(construirComparador(resolucoes));
+
+            int corte = capacidade;
             Map<String, Boolean> resolvidos = mapaResolvidos(resolucoes);
 
-            List<Candidato> ordenados = entry.getValue().stream()
-                    .map(c -> new Candidato(c.estudante, c.pontuacao))
-                    .sorted(construirComparador(resolucoes))
-                    .collect(Collectors.toList());
-
-            int capacidadeTotal = (tipoSlot == TipoSlot.PASSANDO)
-                    ? vaga.getQtdBolsistas() + vaga.getQtdVoluntarios()
-                    : vaga.getQtdListaEspera();
-            long jaOcupados = jaAlocados.stream().filter(c -> c.tipoSlot == tipoSlot).count();
-            int capacidade = (int) (capacidadeTotal - jaOcupados);
-            if (capacidade <= 0) continue;
-
-            int limite = Math.min(capacidade, ordenados.size());
-
-            // Empate na fronteira externa (entra neste tier vs. fica de fora): se
-            // empatado e ainda sem resolução, os dois entram provisoriamente —
-            // o operador decide depois, e a decisão dispara um novo recálculo.
-            boolean empateNaFronteira = limite < ordenados.size()
-                    && ordenados.get(limite - 1).pontuacao.compareTo(ordenados.get(limite).pontuacao) == 0
+            // Empate na fronteira: se o último aceito e o primeiro rejeitado
+            // empatam e não há resolução gravada, os dois entram
+            // provisoriamente — um operador decide depois.
+            if (corte > 0 && corte < lista.size()
+                    && lista.get(corte - 1).pontuacao.compareTo(lista.get(corte).pontuacao) == 0
                     && !resolvidos.containsKey(chavePar(
-                            ordenados.get(limite - 1).estudante.getId(),
-                            ordenados.get(limite).estudante.getId()));
-            if (empateNaFronteira) {
-                ordenados.get(limite - 1).empate = true;
-                ordenados.get(limite).empate = true;
+                            lista.get(corte - 1).estudante.getId(), lista.get(corte).estudante.getId()))) {
+                corte++;
             }
-            int limiteEfetivo = empateNaFronteira ? limite + 1 : limite;
 
-            long bolsistasJaAlocados = jaAlocados.stream()
-                    .filter(c -> c.tipo == Classificacao.Tipo.BOLSISTA).count();
-            int offsetPosicao = jaAlocados.size();
+            if (corte < lista.size()
+                    && lista.get(corte - 1).pontuacao.compareTo(lista.get(corte).pontuacao) == 0) {
+                log.warn("Empate de 3 ou mais estudantes no limite da vaga {} — só o par mais "
+                        + "próximo do corte fica provisório, os demais são desclassificados "
+                        + "automaticamente (empate múltiplo não é resolvido pela interface).",
+                        opcao.vagaId());
+            }
+
+            while (lista.size() > corte) {
+                Candidato excedente = lista.remove(lista.size() - 1);
+                livres.add(excedente.estudante);
+            }
+        }
+        return holds;
+    }
+
+    /**
+     * Junta o resultado final (já convergido) das duas fases por vaga,
+     * atribuindo posição sequencial (Passando primeiro, depois Espera),
+     * tipo (Bolsista/Voluntário/Lista de Espera) e as flags de empate —
+     * tanto a de fronteira externa (entrar ou não na fase) quanto a interna
+     * (fronteira bolsista/voluntário dentro do Passando).
+     */
+    private Map<UUID, List<Candidato>> montarResultados(
+            List<Vaga> vagas,
+            Map<UUID, List<Candidato>> passandoPorVaga,
+            Map<UUID, List<Candidato>> esperaPorVaga,
+            Map<UUID, List<ResolucaoEmpate>> resolucoesPorVaga) {
+
+        Map<UUID, List<Candidato>> resultados = new HashMap<>();
+
+        for (Vaga vaga : vagas) {
+            List<ResolucaoEmpate> resolucoes = resolucoesPorVaga.getOrDefault(vaga.getId(), List.of());
+            Comparator<Candidato> comparador = construirComparador(resolucoes);
+            Map<String, Boolean> resolvidos = mapaResolvidos(resolucoes);
+
+            List<Candidato> passando = new ArrayList<>(passandoPorVaga.getOrDefault(vaga.getId(), List.of()));
+            List<Candidato> espera = new ArrayList<>(esperaPorVaga.getOrDefault(vaga.getId(), List.of()));
+            passando.sort(comparador);
+            espera.sort(comparador);
+
+            int capacidadePassando = vaga.getQtdBolsistas() + vaga.getQtdVoluntarios();
+            if (passando.size() > capacidadePassando) {
+                marcarEmpateUltimosDois(passando);
+            }
+
             int qtdBolsistasVaga = vaga.getQtdBolsistas();
-
-            for (int i = 0; i < limiteEfetivo; i++) {
-                Candidato c = ordenados.get(i);
-                c.tipoSlot = tipoSlot;
-                c.posicao = offsetPosicao + i + 1;
-                if (tipoSlot == TipoSlot.ESPERA) {
-                    c.tipo = Classificacao.Tipo.LISTA_ESPERA;
-                } else {
-                    long indiceGlobalPassando = bolsistasJaAlocados + i;
-                    c.tipo = (indiceGlobalPassando < qtdBolsistasVaga)
-                            ? Classificacao.Tipo.BOLSISTA
-                            : Classificacao.Tipo.VOLUNTARIO;
-                }
-                jaAlocados.add(c);
-                consumidos.add(c.estudante.getId());
-            }
-
-            // Empate interno bolsista/voluntário (só faz sentido dentro de PASSANDO)
-            if (tipoSlot == TipoSlot.PASSANDO) {
-                int fronteiraBolsista = (int) (qtdBolsistasVaga - bolsistasJaAlocados);
-                if (fronteiraBolsista > 0 && fronteiraBolsista < limiteEfetivo) {
-                    Candidato dentro = ordenados.get(fronteiraBolsista - 1);
-                    Candidato fora = ordenados.get(fronteiraBolsista);
-                    if (dentro.pontuacao.compareTo(fora.pontuacao) == 0
-                            && !resolvidos.containsKey(chavePar(dentro.estudante.getId(), fora.estudante.getId()))) {
-                        dentro.empate = true;
-                        fora.empate = true;
-                    }
+            if (qtdBolsistasVaga > 0 && qtdBolsistasVaga < passando.size()) {
+                Candidato dentro = passando.get(qtdBolsistasVaga - 1);
+                Candidato fora = passando.get(qtdBolsistasVaga);
+                if (dentro.pontuacao.compareTo(fora.pontuacao) == 0
+                        && !resolvidos.containsKey(chavePar(dentro.estudante.getId(), fora.estudante.getId()))) {
+                    dentro.empate = true;
+                    fora.empate = true;
                 }
             }
+
+            List<Candidato> finalDaVaga = new ArrayList<>();
+            for (int i = 0; i < passando.size(); i++) {
+                Candidato c = passando.get(i);
+                c.posicao = i + 1;
+                c.tipo = (i < qtdBolsistasVaga) ? Classificacao.Tipo.BOLSISTA : Classificacao.Tipo.VOLUNTARIO;
+                finalDaVaga.add(c);
+            }
+
+            if (espera.size() > vaga.getQtdListaEspera()) {
+                marcarEmpateUltimosDois(espera);
+            }
+            int offset = passando.size();
+            for (int i = 0; i < espera.size(); i++) {
+                Candidato c = espera.get(i);
+                c.posicao = offset + i + 1;
+                c.tipo = Classificacao.Tipo.LISTA_ESPERA;
+                finalDaVaga.add(c);
+            }
+
+            resultados.put(vaga.getId(), finalDaVaga);
+        }
+
+        return resultados;
+    }
+
+    private void marcarEmpateUltimosDois(List<Candidato> lista) {
+        int n = lista.size();
+        if (n >= 2) {
+            lista.get(n - 2).empate = true;
+            lista.get(n - 1).empate = true;
         }
     }
 
@@ -268,6 +347,17 @@ public class ClassificacaoService {
     // ══════════════════════════════════════════════════════════════
     //  HELPERS
     // ══════════════════════════════════════════════════════════════
+
+    private List<Opcao> opcoesDoEstudante(Estudante e) {
+        List<Opcao> opcoes = new ArrayList<>();
+        if (e.getOpcao1() != null && e.getMediaOpcao1() != null) {
+            opcoes.add(new Opcao(e.getOpcao1().getId(), e.getIra().add(e.getMediaOpcao1())));
+        }
+        if (e.getOpcao2() != null && e.getMediaOpcao2() != null) {
+            opcoes.add(new Opcao(e.getOpcao2().getId(), e.getIra().add(e.getMediaOpcao2())));
+        }
+        return opcoes;
+    }
 
     private BigDecimal pontuacaoNaVaga(Estudante e, UUID vagaId) {
         if (e.getOpcao1() != null && e.getOpcao1().getId().equals(vagaId) && e.getMediaOpcao1() != null) {
@@ -382,27 +472,16 @@ public class ClassificacaoService {
         return (a.compareTo(b) < 0) ? a + "|" + b : b + "|" + a;
     }
 
-    // Candidatura bruta de um estudante a uma vaga (via 1ª ou 2ª opção),
-    // antes de saber se ele vai ser consumido por algum tier
-    private static class Candidatura {
-        Estudante estudante;
-        Vaga vaga;
-        BigDecimal pontuacao;
+    // Uma opção de um estudante (vaga + pontuação nela), já na ordem de
+    // preferência (1ª opção antes da 2ª) em que ele vai propor
+    private record Opcao(UUID vagaId, BigDecimal pontuacao) {}
 
-        Candidatura(Estudante estudante, Vaga vaga, BigDecimal pontuacao) {
-            this.estudante = estudante;
-            this.vaga = vaga;
-            this.pontuacao = pontuacao;
-        }
-    }
-
-    // Resultado de um candidato dentro de uma vaga específica, já com o
-    // tier (tipoSlot) e o tipo final atribuídos
+    // Candidato provisoriamente (ou definitivamente) alocado numa vaga,
+    // dentro de uma fase (Passando ou Espera)
     private static class Candidato {
         Estudante estudante;
         BigDecimal pontuacao;
         Integer posicao;
-        TipoSlot tipoSlot;
         Classificacao.Tipo tipo;
         boolean empate = false;
 

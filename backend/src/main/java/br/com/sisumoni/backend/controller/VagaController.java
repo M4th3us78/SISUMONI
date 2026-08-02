@@ -45,6 +45,12 @@ public class VagaController {
                 .body(vagaService.cadastrar(request));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Vaga> atualizar(@PathVariable UUID id, @Valid @RequestBody VagaRequest request) {
+        return ResponseEntity.ok(vagaService.atualizar(id, request));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletar(@PathVariable UUID id) {

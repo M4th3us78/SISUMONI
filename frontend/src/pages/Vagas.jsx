@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import {
-  useVagas, useCriarVaga, useDeletarVaga,
+  useVagas, useCriarVaga, useAtualizarVaga, useDeletarVaga,
   useDepartamentos, useTurmas,
 } from '../hooks/useApi'
 
@@ -9,9 +9,10 @@ export default function Vagas() {
   const { data: departamentos } = useDepartamentos()
   const { data: turmas } = useTurmas()
   const criar = useCriarVaga()
+  const atualizar = useAtualizarVaga()
   const deletar = useDeletarVaga()
 
-  const [modalAberto, setModalAberto] = useState(false)
+  const [modalVaga, setModalVaga] = useState(null)
   const [departamentoId, setDepartamentoId] = useState('')
 
   const vagasFiltradas = useMemo(
@@ -39,7 +40,7 @@ export default function Vagas() {
             {departamentos?.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
           </select>
           <button
-            onClick={() => setModalAberto(true)}
+            onClick={() => setModalVaga({})}
             className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
           >
             Nova vaga
@@ -62,7 +63,7 @@ export default function Vagas() {
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-48">Professor</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-44">Departamento</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-32">Vagas</th>
-                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-16"></th>
+                <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-36"></th>
               </tr>
             </thead>
             <tbody>
@@ -81,18 +82,26 @@ export default function Vagas() {
                     {v.qtdBolsistas}B · {v.qtdVoluntarios}V · {v.qtdListaEspera}E
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <button
-                      onClick={() => {
-                        if (confirm(`Remover a vaga "${v.disciplina}"?`)) {
-                          deletar.mutate(v.id, {
-                            onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao remover'),
-                          })
-                        }
-                      }}
-                      className="btn-chip btn-chip-danger"
-                    >
-                      Remover
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setModalVaga(v)}
+                        className="btn-chip btn-chip-accent"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Remover a vaga "${v.disciplina}"?`)) {
+                            deletar.mutate(v.id, {
+                              onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao remover'),
+                            })
+                          }
+                        }}
+                        className="btn-chip btn-chip-danger"
+                      >
+                        Remover
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -101,31 +110,43 @@ export default function Vagas() {
         )}
       </div>
 
-      {modalAberto && (
+      {modalVaga !== null && (
         <ModalVaga
           departamentos={departamentos || []}
           turmas={turmas || []}
-          onFechar={() => setModalAberto(false)}
+          vaga={modalVaga}
+          onFechar={() => setModalVaga(null)}
           onSalvar={(dados) => {
-            criar.mutate(dados, {
-              onSuccess: () => setModalAberto(false),
-              onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao cadastrar vaga'),
-            })
+            const opts = {
+              onSuccess: () => setModalVaga(null),
+              onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao salvar vaga'),
+            }
+            if (modalVaga?.id) {
+              atualizar.mutate({ id: modalVaga.id, dados }, opts)
+            } else {
+              criar.mutate(dados, opts)
+            }
           }}
-          salvando={criar.isPending}
+          salvando={modalVaga?.id ? atualizar.isPending : criar.isPending}
         />
       )}
     </div>
   )
 }
 
-// ─── Modal de cadastro de vaga ───────────────────────────
-function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
+// ─── Modal de cadastro/edição de vaga ────────────────────
+function ModalVaga({ departamentos, turmas, vaga, onFechar, onSalvar, salvando }) {
+  const editando = !!vaga?.id
   const [form, setForm] = useState({
-    disciplina: '', professor: '', departamentoId: '',
-    qtdBolsistas: '1', qtdVoluntarios: '2',
+    disciplina: vaga?.disciplina ?? '',
+    professor: vaga?.professor ?? '',
+    departamentoId: vaga?.departamento?.id ?? '',
+    qtdBolsistas: vaga?.qtdBolsistas != null ? String(vaga.qtdBolsistas) : '1',
+    qtdVoluntarios: vaga?.qtdVoluntarios != null ? String(vaga.qtdVoluntarios) : '2',
   })
-  const [turmasSelecionadas, setTurmasSelecionadas] = useState([])
+  const [turmasSelecionadas, setTurmasSelecionadas] = useState(
+    vaga?.turmas?.map((t) => t.id) ?? []
+  )
 
   const set = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }))
 
@@ -166,7 +187,7 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-4 border-b-2 border-border">
-          <h2 className="text-sm font-semibold text-text1">Cadastrar vaga</h2>
+          <h2 className="text-sm font-semibold text-text1">{editando ? 'Editar vaga' : 'Cadastrar vaga'}</h2>
         </div>
 
         <div className="p-5">
@@ -249,7 +270,7 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
             disabled={salvando}
             className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light disabled:opacity-50 transition-colors"
           >
-            {salvando ? 'Salvando...' : 'Salvar vaga'}
+            {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Salvar vaga'}
           </button>
         </div>
       </div>

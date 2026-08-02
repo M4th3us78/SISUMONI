@@ -153,6 +153,10 @@ public class EstudanteService {
                     "Informe a vaga e a média da 2ª opção juntas, ou deixe os dois em branco");
         }
 
+        if (request.opcao2Id() != null && request.opcao2Id().equals(request.opcao1Id())) {
+            throw new RegraDeNegocioException("A 2ª opção não pode ser igual à 1ª opção");
+        }
+
         if (request.opcao2Id() != null) {
             Vaga opcao2 = vagaRepository.findByIdComRelacionamentos(request.opcao2Id())
                     .orElseThrow(() -> new RecursoNaoEncontradoException(
