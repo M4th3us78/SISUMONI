@@ -1,0 +1,1 @@
+ALTER TABLE usuario ADD COLUMN senha_provisoria BOOLEAN NOT NULL DEFAULT false;

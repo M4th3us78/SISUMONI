@@ -13,14 +13,16 @@ export function AuthProvider({ children }) {
 
   async function login(email, senha) {
     const { data } = await api.post('/auth/login', { email, senha })
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('usuario', JSON.stringify({
+    const dadosUsuario = {
       nome: data.nome,
       email: data.email,
       perfil: data.perfil,
-    }))
-    setUsuario({ nome: data.nome, email: data.email, perfil: data.perfil })
-    navigate('/classificacao')
+      senhaProvisoria: data.senhaProvisoria,
+    }
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('usuario', JSON.stringify(dadosUsuario))
+    setUsuario(dadosUsuario)
+    navigate(data.senhaProvisoria ? '/trocar-senha' : '/classificacao')
   }
 
   function logout() {
@@ -30,8 +32,18 @@ export function AuthProvider({ children }) {
     navigate('/login')
   }
 
+  // Chamado depois que o usuário troca a senha provisória com sucesso,
+  // pra liberar o resto do sistema sem precisar logar de novo
+  function senhaAlterada() {
+    setUsuario((atual) => {
+      const novo = { ...atual, senhaProvisoria: false }
+      localStorage.setItem('usuario', JSON.stringify(novo))
+      return novo
+    })
+  }
+
   return (
-    <AuthContext.Provider value={{ usuario, login, logout }}>
+    <AuthContext.Provider value={{ usuario, login, logout, senhaAlterada }}>
       {children}
     </AuthContext.Provider>
   )
