@@ -37,7 +37,7 @@ export default function Operadores() {
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border">
+              <tr className="border-b-2 border-border">
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Nome</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-52">E-mail</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-32">Tipo</th>
@@ -47,7 +47,7 @@ export default function Operadores() {
             </thead>
             <tbody>
               {operadores.map((o) => (
-                <tr key={o.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
+                <tr key={o.id} className="border-b-2 border-border2 last:border-0 hover:bg-surface2">
                   <td className="px-4 py-2.5 text-sm font-medium text-text1">{o.nome}</td>
                   <td className="px-4 py-2.5 text-sm text-text2">{o.email}</td>
                   <td className="px-4 py-2.5">
@@ -176,7 +176,7 @@ function ModalOperador({ turmas, operador, onFechar, onSalvar, salvando }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center p-6 z-50" onClick={onFechar}>
       <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-border">
+        <div className="px-5 py-4 border-b-2 border-border">
           <h2 className="text-sm font-semibold text-text1">{editando ? 'Editar operador' : 'Cadastrar operador'}</h2>
         </div>
 
@@ -208,7 +208,7 @@ function ModalOperador({ turmas, operador, onFechar, onSalvar, salvando }) {
                     key={opcao.valor}
                     type="button"
                     onClick={() => setPerfil(opcao.valor)}
-                    className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                    className={`px-3 py-1.5 rounded-full text-xs border-2 transition-colors ${
                       perfil === opcao.valor
                         ? 'border-gold bg-gold text-bg font-medium'
                         : 'border-border2 text-text2 hover:border-border'
@@ -235,7 +235,7 @@ function ModalOperador({ turmas, operador, onFechar, onSalvar, salvando }) {
                         key={t.id}
                         type="button"
                         onClick={() => alternarTurma(t.id)}
-                        className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                        className={`px-3 py-1.5 rounded-full text-xs border-2 transition-colors ${
                           ativa
                             ? 'border-gold bg-gold text-bg font-medium'
                             : 'border-border2 text-text2 hover:border-border'
@@ -251,8 +251,8 @@ function ModalOperador({ turmas, operador, onFechar, onSalvar, salvando }) {
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-border flex justify-end gap-2">
-          <button onClick={onFechar} className="border border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
+        <div className="px-5 py-4 border-t-2 border-border flex justify-end gap-2">
+          <button onClick={onFechar} className="border-2 border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
             Cancelar
           </button>
           <button

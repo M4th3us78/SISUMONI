@@ -16,7 +16,7 @@ export default function Gestao() {
         </p>
       </div>
 
-      <div className="flex gap-1 mb-4 border-b border-border">
+      <div className="flex gap-1 mb-4 border-b-2 border-border">
         <button
           onClick={() => setAba('turmas')}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -145,7 +145,7 @@ function CrudSimples({ itens, isLoading, nome, setNome, onAdicionar, salvando, o
         ) : (
           <ul>
             {itens.map((item) => (
-              <li key={item.id} className="flex items-center justify-between px-4 py-3 border-b border-border2 last:border-0 hover:bg-surface2">
+              <li key={item.id} className="flex items-center justify-between px-4 py-3 border-b-2 border-border2 last:border-0 hover:bg-surface2">
                 <span className="text-sm text-text1">{item.nome}</span>
                 <button
                   onClick={() => onDeletar(item.id, item.nome)}

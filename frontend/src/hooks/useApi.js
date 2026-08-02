@@ -1,7 +1,8 @@
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  turmasApi, departamentosApi, vagasApi, estudantesApi, operadoresApi,
+  turmasApi, departamentosApi, vagasApi, estudantesApi, operadoresApi, relatoriosApi,
 } from '../lib/recursos'
+import { baixarArquivo } from '../lib/download'
 
 // ── Turmas ──────────────────────────────────────────────
 export function useTurmas() {
@@ -137,6 +138,24 @@ export function useDeletarOperador() {
   return useMutation({
     mutationFn: operadoresApi.deletar,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['operadores'] }),
+  })
+}
+
+// ── Relatórios ────────────────────────────────────────────
+export function useRelatorioNomesFantasia() {
+  return useMutation({
+    mutationFn: async () => {
+      const blob = await relatoriosApi.nomesFantasia()
+      baixarArquivo(blob, 'classificacao-nomes-fantasia.pdf')
+    },
+  })
+}
+export function useRelatorioNomesReais() {
+  return useMutation({
+    mutationFn: async () => {
+      const blob = await relatoriosApi.nomesReais()
+      baixarArquivo(blob, 'classificacao-nomes-reais.pdf')
+    },
   })
 }
 
