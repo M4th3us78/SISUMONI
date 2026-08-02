@@ -57,7 +57,7 @@ export default function Vagas() {
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border">
+              <tr className="border-b-2 border-border">
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Disciplina</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-48">Professor</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-44">Departamento</th>
@@ -67,7 +67,7 @@ export default function Vagas() {
             </thead>
             <tbody>
               {vagasFiltradas.map((v) => (
-                <tr key={v.id} className="border-b border-border2 last:border-0 hover:bg-surface2">
+                <tr key={v.id} className="border-b-2 border-border2 last:border-0 hover:bg-surface2">
                   <td className="px-4 py-2.5">
                     <div className="text-sm font-medium text-text1">{v.disciplina}</div>
                   </td>
@@ -165,7 +165,7 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
         className="card w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-border">
+        <div className="px-5 py-4 border-b-2 border-border">
           <h2 className="text-sm font-semibold text-text1">Cadastrar vaga</h2>
         </div>
 
@@ -226,7 +226,7 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
                   <button
                     key={t.id}
                     onClick={() => alternarTurma(t.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                    className={`px-3 py-1.5 rounded-full text-xs border-2 transition-colors ${
                       ativa
                         ? 'border-gold bg-gold text-bg font-medium'
                         : 'border-border2 text-text2 hover:border-border'
@@ -240,8 +240,8 @@ function ModalVaga({ departamentos, turmas, onFechar, onSalvar, salvando }) {
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-border flex justify-end gap-2">
-          <button onClick={onFechar} className="border border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
+        <div className="px-5 py-4 border-t-2 border-border flex justify-end gap-2">
+          <button onClick={onFechar} className="border-2 border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
             Cancelar
           </button>
           <button

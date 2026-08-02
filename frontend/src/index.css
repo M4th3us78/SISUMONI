@@ -22,6 +22,8 @@
   --color-warning-dim: #2D1B00;
   --color-danger: #EF4444;
   --color-danger-dim: #2A0A0A;
+  --color-orange: #F97316;
+  --color-orange-dim: #2E1605;
 
   --color-text1: #F0F4FF;
   --color-text2: #8BA3C0;
@@ -57,10 +59,16 @@
   --color-warning-dim: #FBE7C7;
   --color-danger: #B91C1C;
   --color-danger-dim: #FBDADA;
+  --color-orange: #C2410C;
+  --color-orange-dim: #FDE7D9;
 
   --color-text1: #14181F;
   --color-text2: #3D4C63;
   --color-text3: #5A6B82;
+}
+
+html {
+  font-size: 17px;
 }
 
 body {
@@ -76,13 +84,14 @@ button:not(:disabled) {
 @layer components {
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium
-           font-mono tracking-wide border whitespace-nowrap;
+           font-mono tracking-wide border-2 whitespace-nowrap;
   }
   .badge-gold    { @apply bg-gold-dim    text-gold-light   border-gold/30; }
   .badge-accent  { @apply bg-accent-dim  text-accent-light border-accent/30; }
   .badge-green   { @apply bg-success-dim text-success       border-success/30; }
   .badge-yellow  { @apply bg-warning-dim text-warning       border-warning/30; }
   .badge-red     { @apply bg-danger-dim  text-danger        border-danger/30; }
+  .badge-orange  { @apply bg-orange-dim  text-orange         border-orange/30; }
   .badge-neutral { @apply bg-surface3    text-text2         border-border2; }
 
   .rank-pos { @apply inline-grid place-items-center w-6 h-6 rounded-md font-mono font-bold text-xs; }
@@ -90,10 +99,10 @@ button:not(:disabled) {
   .rank-2 { @apply bg-accent-dim text-accent-light; }
   .rank-n { @apply bg-surface3   text-text3; }
 
-  .card { @apply bg-surface border border-border rounded-2xl; }
+  .card { @apply bg-surface border-2 border-border rounded-2xl; }
 
   .field {
-    @apply bg-surface2 border border-border2 rounded-lg px-3 py-2 text-sm
+    @apply bg-surface2 border-2 border-border2 rounded-lg px-3 py-2 text-sm
            text-text1 placeholder:text-text3 w-full
            focus:outline-none focus:border-accent-light transition-colors;
   }
@@ -103,7 +112,7 @@ button:not(:disabled) {
 
   .btn-chip {
     @apply inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium
-           border transition-colors whitespace-nowrap;
+           border-2 transition-colors whitespace-nowrap;
   }
   .btn-chip-neutral { @apply border-border2   text-text2       hover:bg-surface2 hover:text-text1; }
   .btn-chip-accent  { @apply border-accent/30 text-accent-light hover:bg-accent-dim; }

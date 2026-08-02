@@ -160,7 +160,7 @@ export default function Estudantes() {
                   <div className="px-4 pb-4">
                     <div className="text-xs text-text2 tabular-nums font-mono mb-3">IRA {fmtNota(e.ira)}</div>
 
-                    <div className="pt-3 border-t border-border2">
+                    <div className="pt-3 border-t-2 border-border2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">1ª opção</span>
                         {e.opcao1 ? <span className={`badge ${badge1.classe}`}>{badge1.texto}</span> : '—'}
@@ -168,7 +168,7 @@ export default function Estudantes() {
                       <div className="text-sm text-text1 mt-0.5">{e.opcao1?.disciplina ?? '—'}</div>
                       {e.opcao1 && (
                         <>
-                          <div className="text-xs text-text3">Prof. {e.opcao1.professor}</div>
+                          <div className="text-sm font-medium text-gold-light">Prof. {e.opcao1.professor}</div>
                           <div className="text-xs text-text2 tabular-nums font-mono mt-0.5">
                             Média {fmtNota(e.mediaOpcao1)} · Pontuação {fmtNota(c1?.pontuacao)}
                           </div>
@@ -177,13 +177,13 @@ export default function Estudantes() {
                     </div>
 
                     {e.opcao2 && (
-                      <div className="mt-3 pt-3 border-t border-border2">
+                      <div className="mt-3 pt-3 border-t-2 border-border2">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] uppercase tracking-wide text-text3 font-mono font-medium">2ª opção</span>
                           <span className={`badge ${badge2.classe}`}>{badge2.texto}</span>
                         </div>
                         <div className="text-sm text-text1 mt-0.5">{e.opcao2.disciplina}</div>
-                        <div className="text-xs text-text3">Prof. {e.opcao2.professor}</div>
+                        <div className="text-sm font-medium text-gold-light">Prof. {e.opcao2.professor}</div>
                         <div className="text-xs text-text2 tabular-nums font-mono mt-0.5">
                           Média {fmtNota(e.mediaOpcao2)} · Pontuação {fmtNota(c2?.pontuacao)}
                         </div>
@@ -328,7 +328,7 @@ function ModalCadastro({ turmas, vagas, estudante, onFechar, onSalvar, salvando 
         className="card w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-border">
+        <div className="px-5 py-4 border-b-2 border-border">
           <h2 className="text-sm font-semibold text-text1">{editando ? 'Editar estudante' : 'Cadastrar estudante'}</h2>
         </div>
 
@@ -386,7 +386,7 @@ function ModalCadastro({ turmas, vagas, estudante, onFechar, onSalvar, salvando 
           </div>
 
           {/* Cálculo ao vivo */}
-          <div className="bg-surface2 border border-border2 rounded-lg px-4 py-3 flex items-center justify-between mt-4">
+          <div className="bg-surface2 border-2 border-border2 rounded-lg px-4 py-3 flex items-center justify-between mt-4">
             <div className="text-xs text-text2">
               {pontuacao1 != null
                 ? <>Pontuação = <span className="tabular-nums font-mono">{fmt(ira)}</span> + <span className="tabular-nums font-mono">{fmt(media1)}</span></>
@@ -424,7 +424,7 @@ function ModalCadastro({ turmas, vagas, estudante, onFechar, onSalvar, salvando 
           </div>
 
           {form.opcao2Id && (
-            <div className="bg-surface2 border border-border2 rounded-lg px-4 py-3 flex items-center justify-between mt-4">
+            <div className="bg-surface2 border-2 border-border2 rounded-lg px-4 py-3 flex items-center justify-between mt-4">
               <div className="text-xs text-text2">
                 {pontuacao2 != null
                   ? <>Pontuação = <span className="tabular-nums font-mono">{fmt(ira)}</span> + <span className="tabular-nums font-mono">{fmt(media2)}</span></>
@@ -437,8 +437,8 @@ function ModalCadastro({ turmas, vagas, estudante, onFechar, onSalvar, salvando 
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-border flex justify-end gap-2">
-          <button onClick={onFechar} className="border border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
+        <div className="px-5 py-4 border-t-2 border-border flex justify-end gap-2">
+          <button onClick={onFechar} className="border-2 border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
             Cancelar
           </button>
           <button

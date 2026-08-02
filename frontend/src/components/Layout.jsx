@@ -17,7 +17,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen bg-bg">
-      <header className="bg-surface border-b border-border flex items-center justify-between px-5 sticky top-0 z-20" style={{ height: 72 }}>
+      <header className="bg-surface border-b-2 border-border flex items-center justify-between px-5 sticky top-0 z-20" style={{ height: 72 }}>
         <img src={logoCompleta} alt="SisuMoni" className="h-14 w-auto" />
         <div className="flex items-center gap-3 text-sm text-text2">
           {ehAdmin && (
@@ -36,7 +36,7 @@ export default function Layout({ children }) {
       </header>
 
       <div className="grid" style={{ gridTemplateColumns: '196px 1fr', minHeight: 'calc(100vh - 72px)' }}>
-        <nav className="bg-surface border-r border-border p-3 flex flex-col gap-1">
+        <nav className="bg-surface border-r-2 border-border p-3 flex flex-col gap-1">
           <p className="text-[10px] uppercase tracking-wider text-text3 px-3 pt-2 pb-1">
             Período 2026.1
           </p>

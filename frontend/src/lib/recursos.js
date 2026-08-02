@@ -40,3 +40,9 @@ export const operadoresApi = {
   atualizar: (id, dados) => api.put(`/operadores/${id}`, dados).then(r => r.data),
   deletar: (id) => api.delete(`/operadores/${id}`),
 }
+
+// ── Relatórios ────────────────────────────────────────────
+export const relatoriosApi = {
+  nomesFantasia: () => api.get('/relatorios/classificacao/nomes-fantasia', { responseType: 'blob' }).then(r => r.data),
+  nomesReais: () => api.get('/relatorios/classificacao/nomes-reais', { responseType: 'blob' }).then(r => r.data),
+}

@@ -1,7 +1,11 @@
 import { useState, useMemo } from 'react'
-import { useVagas, useDepartamentos, useClassificacoesPorVagas, useResolverEmpate } from '../hooks/useApi'
+import {
+  useVagas, useDepartamentos, useClassificacoesPorVagas, useResolverEmpate,
+  useRelatorioNomesFantasia, useRelatorioNomesReais,
+} from '../hooks/useApi'
 import { useAuth } from '../contexts/AuthContext'
 import { fmtNota, tipoBadge } from '../lib/formato'
+import { extrairMensagemErroBlob } from '../lib/download'
 
 export default function Classificacao() {
   const { usuario } = useAuth()
@@ -9,6 +13,17 @@ export default function Classificacao() {
   const { data: vagas, isLoading: carregandoVagas } = useVagas()
   const { data: departamentos } = useDepartamentos()
   const [departamentoId, setDepartamentoId] = useState('')
+  const relatorioFantasia = useRelatorioNomesFantasia()
+  const relatorioReais = useRelatorioNomesReais()
+
+  function baixarRelatorio(mutation) {
+    mutation.mutate(undefined, {
+      onError: async (err) => {
+        const mensagem = await extrairMensagemErroBlob(err)
+        alert(mensagem || 'Erro ao gerar o relatório')
+      },
+    })
+  }
 
   const vagasFiltradas = useMemo(
     () => (vagas?.filter(v => !departamentoId || v.departamento.id === departamentoId) ?? [])
@@ -35,7 +50,25 @@ export default function Classificacao() {
     <div>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-display font-bold text-text1">Classificação</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-display font-bold text-text1">Classificação</h1>
+            <button
+              onClick={() => baixarRelatorio(relatorioFantasia)}
+              disabled={relatorioFantasia.isPending}
+              className="btn-chip btn-chip-neutral disabled:opacity-50"
+            >
+              {relatorioFantasia.isPending ? 'Gerando...' : 'Baixar Classificação Parcial'}
+            </button>
+            {ehAdmin && (
+              <button
+                onClick={() => baixarRelatorio(relatorioReais)}
+                disabled={relatorioReais.isPending}
+                className="btn-chip btn-chip-neutral disabled:opacity-50"
+              >
+                {relatorioReais.isPending ? 'Gerando...' : 'Baixar Classificação Final'}
+              </button>
+            )}
+          </div>
           <p className="text-text2 text-sm mt-0.5">
             A lista é recalculada automaticamente a cada cadastro
           </p>
@@ -94,7 +127,7 @@ function VagaCard({ vaga, classificacao, isLoading, ehAdmin }) {
       )}
 
       <div className="card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border">
+        <div className="px-4 py-3 border-b-2 border-border">
           <p className="text-sm font-semibold text-text1">{vaga.disciplina}</p>
           <p className="text-sm font-medium text-gold-light mt-0.5">Prof. {vaga.professor}</p>
           <p className="text-xs text-text2 mt-0.5">
@@ -109,7 +142,7 @@ function VagaCard({ vaga, classificacao, isLoading, ehAdmin }) {
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border">
+              <tr className="border-b-2 border-border">
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2 w-14">Pos.</th>
                 <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Estudante</th>
                 {ehAdmin && <th className="text-left text-[10px] uppercase tracking-wide text-text3 font-mono font-medium px-4 py-2">Nome fantasia</th>}
@@ -121,7 +154,7 @@ function VagaCard({ vaga, classificacao, isLoading, ehAdmin }) {
               {classificacao.map((c) => {
                 const badge = tipoBadge(c.tipo, c.empate)
                 return (
-                  <tr key={c.estudanteId} className={`border-b border-border2 last:border-0 hover:bg-surface2 ${c.empate ? 'bg-warning-dim/40' : ''}`}>
+                  <tr key={c.estudanteId} className={`border-b-2 border-border2 last:border-0 hover:bg-surface2 ${c.empate ? 'bg-warning-dim/40' : ''}`}>
                     <td className="px-4 py-2.5">
                       <span className={`rank-pos ${
                         c.tipo === 'BOLSISTA' ? 'rank-1' :
@@ -181,7 +214,7 @@ function ModalEmpate({ vagaId, empatados, onFechar }) {
       <button
         key={c.estudanteId}
         onClick={() => setVencedorId(c.estudanteId)}
-        className={`w-full text-left border rounded-xl px-4 py-3 flex items-center gap-3 mt-2 transition-colors ${
+        className={`w-full text-left border-2 rounded-xl px-4 py-3 flex items-center gap-3 mt-2 transition-colors ${
           escolhido ? 'border-gold bg-gold-dim' : 'border-border2 hover:border-border'
         }`}
       >
@@ -203,7 +236,7 @@ function ModalEmpate({ vagaId, empatados, onFechar }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center p-6 z-50" onClick={onFechar}>
       <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-border flex items-start gap-3">
+        <div className="px-5 py-4 border-b-2 border-border flex items-start gap-3">
           <div className="w-8 h-8 rounded-lg bg-warning-dim text-warning grid place-items-center text-base shrink-0">!</div>
           <div>
             <h2 className="text-sm font-semibold text-text1">Resolver empate</h2>
@@ -224,8 +257,8 @@ function ModalEmpate({ vagaId, empatados, onFechar }) {
           {b && opcao(b)}
         </div>
 
-        <div className="px-5 py-4 border-t border-border flex justify-end gap-2">
-          <button onClick={onFechar} className="border border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
+        <div className="px-5 py-4 border-t-2 border-border flex justify-end gap-2">
+          <button onClick={onFechar} className="border-2 border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
             Cancelar
           </button>
           <button
