@@ -70,7 +70,14 @@ export default function Vagas() {
               {vagasFiltradas.map((v) => (
                 <tr key={v.id} className="border-b-2 border-border2 last:border-0 hover:bg-surface2">
                   <td className="px-4 py-2.5">
-                    <div className="text-sm font-medium text-text1">{v.disciplina}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-text1">{v.disciplina}</span>
+                      {v.alertaChoqueHorario && (
+                        <span title="ATENÇÃO! Verifique choque de horário" className="badge badge-red">
+                          Choque de horário
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-2.5 text-sm font-medium text-gold-light">
                     {v.professor}
@@ -143,6 +150,7 @@ function ModalVaga({ departamentos, turmas, vaga, onFechar, onSalvar, salvando }
     departamentoId: vaga?.departamento?.id ?? '',
     qtdBolsistas: vaga?.qtdBolsistas != null ? String(vaga.qtdBolsistas) : '1',
     qtdVoluntarios: vaga?.qtdVoluntarios != null ? String(vaga.qtdVoluntarios) : '2',
+    alertaChoqueHorario: vaga?.alertaChoqueHorario ?? false,
   })
   const [turmasSelecionadas, setTurmasSelecionadas] = useState(
     vaga?.turmas?.map((t) => t.id) ?? []
@@ -177,6 +185,7 @@ function ModalVaga({ departamentos, turmas, vaga, onFechar, onSalvar, salvando }
       qtdVoluntarios: vol,
       qtdListaEspera: 1, // fixo — sempre 1 vaga de lista de espera
       turmasIds: turmasSelecionadas,
+      alertaChoqueHorario: form.alertaChoqueHorario,
     })
   }
 
@@ -259,6 +268,21 @@ function ModalVaga({ departamentos, turmas, vaga, onFechar, onSalvar, salvando }
               })}
             </div>
           )}
+
+          <div className="mt-4 pt-4 border-t-2 border-border2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.alertaChoqueHorario}
+                onChange={(e) => set('alertaChoqueHorario', e.target.checked)}
+                className="w-4 h-4 accent-danger"
+              />
+              <span className="text-sm text-text1 font-medium">Marcar possível choque de horário</span>
+            </label>
+            <p className="text-[11px] text-text3 mt-1">
+              Se marcado, o aviso "ATENÇÃO! Verifique choque de horário" aparece ao lado desta vaga no relatório em PDF.
+            </p>
+          </div>
         </div>
 
         <div className="px-5 py-4 border-t-2 border-border flex justify-end gap-2">

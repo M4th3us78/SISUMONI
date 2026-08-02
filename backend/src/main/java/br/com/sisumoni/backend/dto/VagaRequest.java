@@ -27,5 +27,7 @@ public record VagaRequest(
         @Max(value = 1, message = "A lista de espera é sempre 1")
         Integer qtdListaEspera,
 
-        Set<UUID> turmasIds
+        Set<UUID> turmasIds,
+
+        Boolean alertaChoqueHorario
 ) {}

@@ -67,6 +67,7 @@ public class VagaService {
         vaga.setQtdVoluntarios(request.qtdVoluntarios());
         vaga.setQtdListaEspera(request.qtdListaEspera());
         vaga.setTurmas(turmas);
+        vaga.setAlertaChoqueHorario(Boolean.TRUE.equals(request.alertaChoqueHorario()));
 
         return vagaRepository.save(vaga);
     }
@@ -94,6 +95,7 @@ public class VagaService {
         vaga.setQtdVoluntarios(request.qtdVoluntarios());
         vaga.setQtdListaEspera(request.qtdListaEspera());
         vaga.setTurmas(turmas);
+        vaga.setAlertaChoqueHorario(Boolean.TRUE.equals(request.alertaChoqueHorario()));
 
         Vaga salvo = vagaRepository.save(vaga);
 
