@@ -5,6 +5,7 @@ import br.com.sisumoni.backend.domain.Usuario;
 import br.com.sisumoni.backend.dto.OperadorAtualizacaoRequest;
 import br.com.sisumoni.backend.dto.OperadorRequest;
 import br.com.sisumoni.backend.dto.OperadorResponse;
+import br.com.sisumoni.backend.dto.ReativarOperadorRequest;
 import br.com.sisumoni.backend.exception.RecursoNaoEncontradoException;
 import br.com.sisumoni.backend.exception.RegraDeNegocioException;
 import br.com.sisumoni.backend.repository.TurmaRepository;
@@ -94,6 +95,28 @@ public class OperadorService {
         // estudantes cadastrados por ele continua íntegro.
         operador.setAtivo(false);
         usuarioRepository.save(operador);
+    }
+
+    @Transactional
+    public OperadorResponse reativar(UUID id, ReativarOperadorRequest request) {
+        Usuario operador = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Operador não encontrado com id: " + id));
+
+        if (operador.getPerfil() == Usuario.Perfil.ADMIN) {
+            throw new RegraDeNegocioException(
+                    "Não é possível reativar um administrador por aqui");
+        }
+
+        if (operador.isAtivo()) {
+            throw new RegraDeNegocioException("O operador já está ativo");
+        }
+
+        operador.setAtivo(true);
+        operador.setSenhaHash(passwordEncoder.encode(request.senha()));
+        operador.setSenhaProvisoria(true);
+
+        return toResponse(usuarioRepository.save(operador));
     }
 
     @Transactional

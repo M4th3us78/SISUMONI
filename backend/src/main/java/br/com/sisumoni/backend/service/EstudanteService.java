@@ -27,15 +27,18 @@ public class EstudanteService {
     private final TurmaRepository turmaRepository;
     private final VagaRepository vagaRepository;
     private final ClassificacaoService classificacaoService;
+    private final ConfiguracaoService configuracaoService;
 
     public EstudanteService(EstudanteRepository estudanteRepository,
                             TurmaRepository turmaRepository,
                             VagaRepository vagaRepository,
-                            ClassificacaoService classificacaoService) {
+                            ClassificacaoService classificacaoService,
+                            ConfiguracaoService configuracaoService) {
         this.estudanteRepository = estudanteRepository;
         this.turmaRepository = turmaRepository;
         this.vagaRepository = vagaRepository;
         this.classificacaoService = classificacaoService;
+        this.configuracaoService = configuracaoService;
     }
 
     // ── Listagem filtrada por perfil ──────────────────────────────
@@ -63,6 +66,12 @@ public class EstudanteService {
     // ── Cadastro ──────────────────────────────────────────────────
     @Transactional
     public Estudante cadastrar(EstudanteRequest request) {
+        Usuario logado = usuarioLogado();
+        if (logado.getPerfil() != Usuario.Perfil.ADMIN && configuracaoService.isCadastroEstudanteBloqueado()) {
+            throw new RegraDeNegocioException(
+                    "O cadastro de novos estudantes está bloqueado pelo administrador");
+        }
+
         Turma turma = turmaRepository.findById(request.turmaId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Turma não encontrada com id: " + request.turmaId()));

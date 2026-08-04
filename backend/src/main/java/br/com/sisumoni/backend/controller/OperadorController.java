@@ -3,6 +3,7 @@ package br.com.sisumoni.backend.controller;
 import br.com.sisumoni.backend.dto.OperadorAtualizacaoRequest;
 import br.com.sisumoni.backend.dto.OperadorRequest;
 import br.com.sisumoni.backend.dto.OperadorResponse;
+import br.com.sisumoni.backend.dto.ReativarOperadorRequest;
 import br.com.sisumoni.backend.service.OperadorService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,12 @@ public class OperadorController {
     public ResponseEntity<OperadorResponse> atualizar(
             @PathVariable UUID id, @Valid @RequestBody OperadorAtualizacaoRequest request) {
         return ResponseEntity.ok(operadorService.atualizar(id, request));
+    }
+
+    @PutMapping("/{id}/reativar")
+    public ResponseEntity<OperadorResponse> reativar(
+            @PathVariable UUID id, @Valid @RequestBody ReativarOperadorRequest request) {
+        return ResponseEntity.ok(operadorService.reativar(id, request));
     }
 
     @DeleteMapping("/{id}")

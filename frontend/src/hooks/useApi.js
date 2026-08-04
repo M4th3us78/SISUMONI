@@ -1,6 +1,6 @@
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  turmasApi, departamentosApi, vagasApi, estudantesApi, operadoresApi, relatoriosApi,
+  turmasApi, departamentosApi, vagasApi, estudantesApi, operadoresApi, relatoriosApi, configuracoesApi,
 } from '../lib/recursos'
 import { baixarArquivo } from '../lib/download'
 
@@ -157,13 +157,39 @@ export function useExcluirOperadorDefinitivamente() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['operadores'] }),
   })
 }
+export function useReativarOperador() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, dados }) => operadoresApi.reativar(id, dados),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['operadores'] }),
+  })
+}
+
+// ── Configurações do sistema ─────────────────────────────
+export function useConfiguracoes() {
+  return useQuery({ queryKey: ['configuracoes'], queryFn: configuracoesApi.obter })
+}
+export function useAtualizarCadastroEstudante() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: configuracoesApi.atualizarCadastroEstudante,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['configuracoes'] }),
+  })
+}
 
 // ── Relatórios ────────────────────────────────────────────
+function dataHoje() {
+  const hoje = new Date()
+  const dd = String(hoje.getDate()).padStart(2, '0')
+  const mm = String(hoje.getMonth() + 1).padStart(2, '0')
+  const aaaa = hoje.getFullYear()
+  return `${dd}-${mm}-${aaaa}`
+}
 export function useRelatorioNomesFantasia() {
   return useMutation({
     mutationFn: async () => {
       const blob = await relatoriosApi.nomesFantasia()
-      baixarArquivo(blob, 'classificacao-nomes-fantasia.pdf')
+      baixarArquivo(blob, `Classificacao-parcial-${dataHoje()}.pdf`)
     },
   })
 }
@@ -171,7 +197,7 @@ export function useRelatorioNomesReais() {
   return useMutation({
     mutationFn: async () => {
       const blob = await relatoriosApi.nomesReais()
-      baixarArquivo(blob, 'classificacao-nomes-reais.pdf')
+      baixarArquivo(blob, `Classificacao-final-${dataHoje()}.pdf`)
     },
   })
 }

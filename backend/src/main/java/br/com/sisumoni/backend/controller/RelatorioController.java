@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 @RestController
 @RequestMapping("/api/relatorios")
 public class RelatorioController {
@@ -21,13 +24,17 @@ public class RelatorioController {
 
     @GetMapping("/classificacao/nomes-fantasia")
     public ResponseEntity<byte[]> nomesFantasia() {
-        return responderPdf(relatorioService.gerarRelatorio(false), "classificacao-nomes-fantasia.pdf");
+        return responderPdf(relatorioService.gerarRelatorio(false), "Classificacao-parcial-" + dataHoje() + ".pdf");
     }
 
     @GetMapping("/classificacao/nomes-reais")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> nomesReais() {
-        return responderPdf(relatorioService.gerarRelatorio(true), "classificacao-nomes-reais.pdf");
+        return responderPdf(relatorioService.gerarRelatorio(true), "Classificacao-final-" + dataHoje() + ".pdf");
+    }
+
+    private String dataHoje() {
+        return LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
     }
 
     private ResponseEntity<byte[]> responderPdf(byte[] pdf, String nomeArquivo) {

@@ -46,6 +46,14 @@ export const operadoresApi = {
   atualizar: (id, dados) => api.put(`/operadores/${id}`, dados).then(r => r.data),
   deletar: (id) => api.delete(`/operadores/${id}`),
   excluirDefinitivamente: (id) => api.delete(`/operadores/${id}/definitivo`),
+  reativar: (id, dados) => api.put(`/operadores/${id}/reativar`, dados).then(r => r.data),
+}
+
+// ── Configurações do sistema ─────────────────────────────
+export const configuracoesApi = {
+  obter: () => api.get('/configuracoes').then(r => r.data),
+  atualizarCadastroEstudante: (bloqueado) =>
+    api.put('/configuracoes/cadastro-estudante', { bloqueado }).then(r => r.data),
 }
 
 // ── Relatórios ────────────────────────────────────────────
