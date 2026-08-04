@@ -93,7 +93,7 @@ public class RelatorioService {
             documento.add(new Paragraph(" "));
 
             for (Map.Entry<String, List<Vaga>> entry : vagasPorDepartamento.entrySet()) {
-                Paragraph tituloDepartamento = new Paragraph("Departamento de " + entry.getKey(), FONTE_DEPARTAMENTO);
+                Paragraph tituloDepartamento = new Paragraph(entry.getKey(), FONTE_DEPARTAMENTO);
                 tituloDepartamento.setSpacingBefore(12);
                 tituloDepartamento.setSpacingAfter(6);
                 documento.add(tituloDepartamento);
@@ -164,11 +164,16 @@ public class RelatorioService {
             return;
         }
 
-        PdfPTable tabela = new PdfPTable(new float[]{1.5f, 5f, 2.5f});
+        PdfPTable tabela = new PdfPTable(comNomesReais
+                ? new float[]{1.5f, 5f, 2.5f}
+                : new float[]{1.5f, 5f, 2f, 2.5f});
         tabela.setWidthPercentage(100);
         tabela.setSpacingAfter(10);
 
-        for (String cabecalho : new String[]{"Posição", "Nome", "Tipo"}) {
+        String[] cabecalhos = comNomesReais
+                ? new String[]{"Posição", "Nome", "Tipo"}
+                : new String[]{"Posição", "Nome", "Pontuação", "Tipo"};
+        for (String cabecalho : cabecalhos) {
             PdfPCell celula = new PdfPCell(new Phrase(cabecalho, FONTE_CABECALHO_TABELA));
             celula.setBackgroundColor(COR_CABECALHO_TABELA);
             celula.setPadding(5);
@@ -201,6 +206,9 @@ public class RelatorioService {
 
             tabela.addCell(celulaTexto(listaEspera ? "–" : String.valueOf(c.getPosicao()), corFundo, FONTE_CELULA));
             tabela.addCell(celulaTexto(nome, corFundo, FONTE_CELULA));
+            if (!comNomesReais) {
+                tabela.addCell(celulaTexto(fmtPontuacao(c.getPontuacao()), corFundo, FONTE_CELULA));
+            }
             tabela.addCell(celulaTexto(tipo, corFundo, new Font(Font.HELVETICA, 10, Font.BOLD, corTexto)));
         }
 
@@ -212,5 +220,12 @@ public class RelatorioService {
         celula.setBackgroundColor(corFundo);
         celula.setPadding(5);
         return celula;
+    }
+
+    private String fmtPontuacao(java.math.BigDecimal pontuacao) {
+        if (pontuacao == null) {
+            return "—";
+        }
+        return pontuacao.setScale(4, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',');
     }
 }

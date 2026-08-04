@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useOperadores, useCriarOperador, useAtualizarOperador, useDeletarOperador, useExcluirOperadorDefinitivamente, useTurmas } from '../hooks/useApi'
+import { useOperadores, useCriarOperador, useAtualizarOperador, useDeletarOperador, useExcluirOperadorDefinitivamente, useReativarOperador, useTurmas } from '../hooks/useApi'
 
 export default function Operadores() {
   const { data: operadores, isLoading } = useOperadores()
@@ -8,8 +8,10 @@ export default function Operadores() {
   const atualizar = useAtualizarOperador()
   const deletar = useDeletarOperador()
   const excluirDefinitivamente = useExcluirOperadorDefinitivamente()
+  const reativar = useReativarOperador()
 
   const [modalOperador, setModalOperador] = useState(null)
+  const [modalReativar, setModalReativar] = useState(null)
 
   return (
     <div>
@@ -93,18 +95,26 @@ export default function Operadores() {
                           Desativar
                         </button>
                       ) : (
-                        <button
-                          onClick={() => {
-                            if (confirm(`Excluir definitivamente a conta de ${o.nome}? Essa ação não pode ser desfeita.`)) {
-                              excluirDefinitivamente.mutate(o.id, {
-                                onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao excluir'),
-                              })
-                            }
-                          }}
-                          className="btn-chip btn-chip-danger"
-                        >
-                          Excluir definitivamente
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setModalReativar(o)}
+                            className="btn-chip btn-chip-accent"
+                          >
+                            Reativar
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Excluir definitivamente a conta de ${o.nome}? Essa ação não pode ser desfeita.`)) {
+                                excluirDefinitivamente.mutate(o.id, {
+                                  onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao excluir'),
+                                })
+                              }
+                            }}
+                            className="btn-chip btn-chip-danger"
+                          >
+                            Excluir definitivamente
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -134,6 +144,66 @@ export default function Operadores() {
           salvando={modalOperador?.id ? atualizar.isPending : criar.isPending}
         />
       )}
+
+      {modalReativar !== null && (
+        <ModalReativarOperador
+          operador={modalReativar}
+          onFechar={() => setModalReativar(null)}
+          onSalvar={(dados) => {
+            reativar.mutate({ id: modalReativar.id, dados }, {
+              onSuccess: () => setModalReativar(null),
+              onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao reativar'),
+            })
+          }}
+          salvando={reativar.isPending}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Modal de reativação de operador ─────────────────────
+function ModalReativarOperador({ operador, onFechar, onSalvar, salvando }) {
+  const [senha, setSenha] = useState('')
+
+  function submeter() {
+    if (senha.length < 6) {
+      alert('A senha deve ter no mínimo 6 caracteres.')
+      return
+    }
+    onSalvar({ senha })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center p-6 z-50" onClick={onFechar}>
+      <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b-2 border-border">
+          <h2 className="text-sm font-semibold text-text1">Reativar {operador.nome}</h2>
+        </div>
+
+        <div className="p-5">
+          <div className="mb-1">
+            <label className="field-label">Nova senha provisória</label>
+            <input type="text" className="field" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Mínimo 6 caracteres" />
+            <p className="text-[11px] text-text3 mt-1">
+              O operador volta a ter acesso e precisará trocar essa senha no próximo login, como se fosse a primeira vez.
+            </p>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t-2 border-border flex justify-end gap-2">
+          <button onClick={onFechar} className="border-2 border-border2 text-text2 rounded-lg px-4 py-2 text-sm hover:bg-surface2">
+            Cancelar
+          </button>
+          <button
+            onClick={submeter}
+            disabled={salvando}
+            className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light disabled:opacity-50 transition-colors"
+          >
+            {salvando ? 'Reativando...' : 'Reativar'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

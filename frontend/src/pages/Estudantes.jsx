@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
   useEstudantes, useCriarEstudante, useAtualizarEstudante, useDeletarEstudante,
-  useTurmas, useVagas, useClassificacoesPorVagas,
+  useTurmas, useVagas, useClassificacoesPorVagas, useConfiguracoes, useAtualizarCadastroEstudante,
 } from '../hooks/useApi'
 import { useAuth } from '../contexts/AuthContext'
 import { fmtNota, tipoBadge } from '../lib/formato'
@@ -13,9 +13,12 @@ export default function Estudantes() {
   const { data: estudantes, isLoading } = useEstudantes()
   const { data: turmas } = useTurmas()
   const { data: vagas } = useVagas()
+  const { data: config } = useConfiguracoes()
+  const bloqueado = config?.cadastroEstudanteBloqueado ?? false
   const criar = useCriarEstudante()
   const atualizar = useAtualizarEstudante()
   const deletar = useDeletarEstudante()
+  const atualizarBloqueio = useAtualizarCadastroEstudante()
 
   const [modalEstudante, setModalEstudante] = useState(null)
   const [turmaId, setTurmaId] = useState('')
@@ -66,7 +69,22 @@ export default function Estudantes() {
     <div>
       <div className="flex items-start justify-between mb-4 gap-3">
         <div>
-          <h1 className="text-xl font-display font-bold text-text1">Estudantes</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-display font-bold text-text1">Estudantes</h1>
+            {ehAdmin && (
+              <button
+                onClick={() => {
+                  atualizarBloqueio.mutate(!bloqueado, {
+                    onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao atualizar configuração'),
+                  })
+                }}
+                disabled={atualizarBloqueio.isPending}
+                className={`btn-chip disabled:opacity-50 ${bloqueado ? 'btn-chip-accent' : 'btn-chip-danger'}`}
+              >
+                {bloqueado ? 'Desbloquear cadastro pelos operadores' : 'Bloquear cadastro pelos operadores'}
+              </button>
+            )}
+          </div>
           <p className="text-text2 text-sm mt-0.5">
             {estudantesFiltrados.length} {turmaId ? 'nesta turma' : 'cadastrados'}
           </p>
@@ -80,12 +98,14 @@ export default function Estudantes() {
             <option value="">Todas as turmas</option>
             {turmasOrdenadas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
           </select>
-          <button
-            onClick={() => setModalEstudante({})}
-            className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
-          >
-            Novo estudante
-          </button>
+          {(ehAdmin || !bloqueado) && (
+            <button
+              onClick={() => setModalEstudante({})}
+              className="bg-gold text-bg rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gold-light transition-colors"
+            >
+              Novo estudante
+            </button>
+          )}
         </div>
       </div>
 
