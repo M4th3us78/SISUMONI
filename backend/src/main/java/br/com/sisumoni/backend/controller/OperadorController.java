@@ -47,4 +47,10 @@ public class OperadorController {
         operadorService.deletar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}/definitivo")
+    public ResponseEntity<Void> excluirDefinitivamente(@PathVariable UUID id) {
+        operadorService.excluirDefinitivamente(id);
+        return ResponseEntity.noContent().build();
+    }
 }
