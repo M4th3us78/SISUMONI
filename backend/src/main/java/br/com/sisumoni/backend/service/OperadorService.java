@@ -96,6 +96,25 @@ public class OperadorService {
         usuarioRepository.save(operador);
     }
 
+    @Transactional
+    public void excluirDefinitivamente(UUID id) {
+        Usuario operador = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Operador não encontrado com id: " + id));
+
+        if (operador.getPerfil() == Usuario.Perfil.ADMIN) {
+            throw new RegraDeNegocioException(
+                    "Não é possível remover um administrador por aqui");
+        }
+
+        if (operador.isAtivo()) {
+            throw new RegraDeNegocioException(
+                    "Só é possível excluir definitivamente contas já desativadas");
+        }
+
+        usuarioRepository.delete(operador);
+    }
+
     private Set<Turma> resolverTurmas(Usuario.Perfil perfil, Set<UUID> turmasIds) {
         if (perfil == Usuario.Perfil.ADMIN) {
             return new HashSet<>();

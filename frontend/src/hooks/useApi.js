@@ -150,6 +150,13 @@ export function useDeletarOperador() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['operadores'] }),
   })
 }
+export function useExcluirOperadorDefinitivamente() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: operadoresApi.excluirDefinitivamente,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['operadores'] }),
+  })
+}
 
 // ── Relatórios ────────────────────────────────────────────
 export function useRelatorioNomesFantasia() {

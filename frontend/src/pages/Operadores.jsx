@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useOperadores, useCriarOperador, useAtualizarOperador, useDeletarOperador, useTurmas } from '../hooks/useApi'
+import { useOperadores, useCriarOperador, useAtualizarOperador, useDeletarOperador, useExcluirOperadorDefinitivamente, useTurmas } from '../hooks/useApi'
 
 export default function Operadores() {
   const { data: operadores, isLoading } = useOperadores()
@@ -7,6 +7,7 @@ export default function Operadores() {
   const criar = useCriarOperador()
   const atualizar = useAtualizarOperador()
   const deletar = useDeletarOperador()
+  const excluirDefinitivamente = useExcluirOperadorDefinitivamente()
 
   const [modalOperador, setModalOperador] = useState(null)
 
@@ -78,7 +79,7 @@ export default function Operadores() {
                       >
                         Editar
                       </button>
-                      {o.ativo && (
+                      {o.ativo ? (
                         <button
                           onClick={() => {
                             if (confirm(`Desativar o operador ${o.nome}? Ele perderá o acesso ao sistema.`)) {
@@ -90,6 +91,19 @@ export default function Operadores() {
                           className="btn-chip btn-chip-danger"
                         >
                           Desativar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Excluir definitivamente a conta de ${o.nome}? Essa ação não pode ser desfeita.`)) {
+                              excluirDefinitivamente.mutate(o.id, {
+                                onError: (err) => alert(err.response?.data?.mensagem || 'Erro ao excluir'),
+                              })
+                            }
+                          }}
+                          className="btn-chip btn-chip-danger"
+                        >
+                          Excluir definitivamente
                         </button>
                       )}
                     </div>
