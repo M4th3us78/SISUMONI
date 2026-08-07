@@ -157,12 +157,6 @@ public class RelatorioService {
         }
 
         List<Classificacao> classificacoes = classificacaoRepository.findByVagaIdComEstudante(vaga.getId());
-        if (classificacoes.isEmpty()) {
-            Paragraph vazio = new Paragraph("Nenhum estudante classificado.", FONTE_CELULA);
-            vazio.setSpacingAfter(6);
-            documento.add(vazio);
-            return;
-        }
 
         PdfPTable tabela = new PdfPTable(comNomesReais
                 ? new float[]{1.5f, 5f, 2.5f}
@@ -212,7 +206,38 @@ public class RelatorioService {
             tabela.addCell(celulaTexto(tipo, corFundo, new Font(Font.HELVETICA, 10, Font.BOLD, corTexto)));
         }
 
+        adicionarPosicoesVagas(tabela, vaga, classificacoes, comNomesReais);
+
         documento.add(tabela);
+    }
+
+    // Preenche com linhas "vaga não preenchida" as posições de bolsista,
+    // voluntário e lista de espera que a vaga oferece mas ninguém ocupou
+    private void adicionarPosicoesVagas(PdfPTable tabela, Vaga vaga, List<Classificacao> classificacoes, boolean comNomesReais) {
+        long ocupadasBolsista = classificacoes.stream().filter(c -> c.getTipo() == Classificacao.Tipo.BOLSISTA).count();
+        long ocupadasVoluntario = classificacoes.stream().filter(c -> c.getTipo() == Classificacao.Tipo.VOLUNTARIO).count();
+        long ocupadasListaEspera = classificacoes.stream().filter(c -> c.getTipo() == Classificacao.Tipo.LISTA_ESPERA).count();
+
+        for (int pos = (int) ocupadasBolsista + 1; pos <= vaga.getQtdBolsistas(); pos++) {
+            adicionarLinhaVazia(tabela, String.valueOf(pos), "Bolsista", COR_BOLSISTA, COR_BOLSISTA_BG, comNomesReais);
+        }
+        for (int pos = vaga.getQtdBolsistas() + (int) ocupadasVoluntario + 1;
+             pos <= vaga.getQtdBolsistas() + vaga.getQtdVoluntarios(); pos++) {
+            adicionarLinhaVazia(tabela, String.valueOf(pos), "Voluntário", COR_VOLUNTARIO, COR_VOLUNTARIO_BG, comNomesReais);
+        }
+        for (long i = ocupadasListaEspera; i < vaga.getQtdListaEspera(); i++) {
+            adicionarLinhaVazia(tabela, "–", "Lista de Espera", COR_LISTA_ESPERA, COR_LISTA_ESPERA_BG, comNomesReais);
+        }
+    }
+
+    private void adicionarLinhaVazia(PdfPTable tabela, String posicao, String tipo, Color corTexto, Color corFundo, boolean comNomesReais) {
+        Font fonteVazia = new Font(Font.HELVETICA, 10, Font.ITALIC, Color.GRAY);
+        tabela.addCell(celulaTexto(posicao, corFundo, FONTE_CELULA));
+        tabela.addCell(celulaTexto("Vaga não preenchida", corFundo, fonteVazia));
+        if (!comNomesReais) {
+            tabela.addCell(celulaTexto("—", corFundo, FONTE_CELULA));
+        }
+        tabela.addCell(celulaTexto(tipo, corFundo, new Font(Font.HELVETICA, 10, Font.BOLD, corTexto)));
     }
 
     private PdfPCell celulaTexto(String texto, Color corFundo, Font fonte) {
