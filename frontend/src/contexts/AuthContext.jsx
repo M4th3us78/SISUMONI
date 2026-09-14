@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook de consumo do contexto mora junto do provider
 export function useAuth() {
   return useContext(AuthContext)
 }

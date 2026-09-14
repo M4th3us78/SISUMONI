@@ -1,6 +1,7 @@
 package br.com.sisumoni.backend.config;
 
 import br.com.sisumoni.backend.service.UsuarioDetailsService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,8 +29,23 @@ public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
+    /**
+     * Origens autorizadas a chamar a API pelo navegador.
+     *
+     * Em produção o Nginx serve front e API sob o mesmo domínio, então
+     * nenhuma requisição é cross-origin e esta lista nem chega a ser
+     * usada. Ela existe para o desenvolvimento, onde o Vite roda em
+     * localhost:5173 e o backend em localhost:8080. Se algum dia o front
+     * for servido de outro domínio, informe-o em CORS_ALLOWED_ORIGINS —
+     * curinga aqui seria perigoso, porque a configuração permite envio de
+     * credenciais.
+     */
+    private final List<String> origensPermitidas;
+
+    public SecurityConfig(JwtFilter jwtFilter,
+                          @Value("${app.cors.allowed-origins}") List<String> origensPermitidas) {
         this.jwtFilter = jwtFilter;
+        this.origensPermitidas = origensPermitidas;
     }
 
     @Bean
@@ -55,7 +71,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOrigins(origensPermitidas);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

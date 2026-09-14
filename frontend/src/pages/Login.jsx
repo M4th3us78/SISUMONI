@@ -15,7 +15,7 @@ export default function Login() {
     setCarregando(true)
     try {
       await login(email, senha)
-    } catch (err) {
+    } catch {
       setErro('Email ou senha incorretos')
     } finally {
       setCarregando(false)

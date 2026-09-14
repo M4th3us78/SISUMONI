@@ -57,7 +57,7 @@ Depois suba tudo (exceto o certbot de renovação contínua, que só faz sentido
 docker compose -f docker-compose.prod.yml up -d db backend frontend nginx
 ```
 
-Acompanhe o primeiro boot do backend — as 4 migrations do Flyway (V1 a V4) precisam aplicar sem erro:
+Acompanhe o primeiro boot do backend — as 9 migrations do Flyway (V1 a V9) precisam aplicar sem erro:
 ```bash
 docker compose -f docker-compose.prod.yml logs -f backend
 ```
