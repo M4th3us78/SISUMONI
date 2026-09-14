@@ -5,9 +5,10 @@ target/
 *.pom
 .flattened-pom.xml
 
-# IDE
+# IDE / ferramentas locais
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 *~
